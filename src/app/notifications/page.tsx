@@ -1,5 +1,6 @@
 import { Bell, CheckCircle2, Clock3 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
 const notifications = [
   {
@@ -19,7 +20,9 @@ const notifications = [
   },
 ];
 
-export default function NotificationsPage() {
+export default async function NotificationsPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppShell active="/notifications" eyebrow="Centre d'activité" title="Notifications">
       <section className="workspace-panel recent-activity-panel">

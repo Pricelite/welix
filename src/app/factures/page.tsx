@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download, ReceiptText, Send } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
 const invoices = [
   {
@@ -26,7 +27,9 @@ const invoices = [
   },
 ];
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppShell active="/factures" eyebrow="Facturation" title="Factures">
       <section className="dashboard-hero-panel">

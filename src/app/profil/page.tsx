@@ -1,23 +1,48 @@
 import { BadgeCheck, Camera, Mail } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { profileDetails } from "@/lib/data";
+import { getAccountSnapshot } from "@/lib/billing";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function ProfilePage() {
+function getInitials(input: string) {
+  return input
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export default async function ProfilePage() {
+  const user = await requireAuthenticatedUser();
+  const { profile } = await getAccountSnapshot(user.id);
+
+  const companyName = profile?.company_name || "Votre entreprise";
+  const fullName = profile?.full_name || companyName;
+  const title = profile?.trade ? `${profile.trade} - ${companyName}` : companyName;
+  const details = [
+    { label: "Nom", value: fullName },
+    { label: "Entreprise", value: companyName },
+    { label: "Métier principal", value: profile?.trade || "À compléter" },
+    { label: "Email", value: profile?.email || user.email || "À compléter" },
+    { label: "Téléphone", value: profile?.phone || "À compléter" },
+    { label: "Adresse", value: profile?.address || "À compléter" },
+  ];
+
   return (
     <AppShell active="/profil" eyebrow="Compte artisan" title="Profil utilisateur">
       <section className="profile-layout">
         <aside className="workspace-panel profile-card">
           <div className="profile-avatar">
-            AB
+            {getInitials(fullName || companyName || "WU")}
             <button className="icon-button" aria-label="Changer la photo">
               <Camera size={15} />
             </button>
           </div>
-          <h2>Antoine Bernard</h2>
-          <p>Gérant - Bernard Rénovation</p>
+          <h2>{fullName}</h2>
+          <p>{title}</p>
           <span className="status status-accepté">
             <BadgeCheck size={14} />
-            Profil vérifié
+            Profil synchronisé
           </span>
         </aside>
 
@@ -30,7 +55,7 @@ export default function ProfilePage() {
             </button>
           </div>
           <dl className="profile-details">
-            {profileDetails.map((detail) => (
+            {details.map((detail) => (
               <div key={detail.label}>
                 <dt>{detail.label}</dt>
                 <dd>{detail.value}</dd>

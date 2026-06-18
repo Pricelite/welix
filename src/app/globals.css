@@ -1260,6 +1260,17 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.auth-success {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 9px;
+  color: #166534;
+  background: #f0fdf4;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .app-page {
   min-height: 100vh;
   display: grid;
@@ -2658,7 +2669,54 @@ dd {
     width: 100%;
   }
 
-  .client-card dl {
-    grid-template-columns: 1fr;
+.client-card dl {
+  grid-template-columns: 1fr;
   }
+}
+
+.status-accepte {
+  color: #087443;
+  background: var(--green-soft);
+}
+
+.status-envoye {
+  color: #175cd3;
+  background: #eaf1ff;
+}
+
+.empty-state-text {
+  margin-top: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.simple-form-panel {
+  margin-bottom: 16px;
+}
+
+.simple-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.simple-form-grid label,
+.ai-input-panel label {
+  display: grid;
+  gap: 8px;
+  color: var(--blue);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.simple-form-grid input,
+.ai-input-panel input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: #0f1728;
+  background: #ffffff;
 }

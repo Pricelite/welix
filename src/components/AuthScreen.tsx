@@ -8,13 +8,20 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthScreenProps = {
   mode: "connexion" | "inscription";
+  errorCode?: string;
 };
 
-export function AuthScreen({ mode }: AuthScreenProps) {
+const callbackMessages: Record<string, string> = {
+  missing_code: "Le lien de connexion est incomplet. Réessaie depuis l'email reçu.",
+  auth_callback_failed: "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
+};
+
+export function AuthScreen({ mode, errorCode }: AuthScreenProps) {
   const isSignup = mode === "inscription";
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const callbackMessage = errorCode ? callbackMessages[errorCode] || "" : "";
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,20 +31,36 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") || "");
     const password = String(formData.get("password") || "");
+    const company = String(formData.get("company") || "").trim();
+    const trade = String(formData.get("trade") || "").trim();
 
     try {
       const supabase = createSupabaseBrowserClient();
+      const redirectTo = `${window.location.origin}/auth/callback`;
       const { error } = isSignup
-        ? await supabase.auth.signUp({ email, password })
+        ? await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: redirectTo,
+              data: {
+                company_name: company || null,
+                trade: trade || null,
+              },
+            },
+          })
         : await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         setMessage(error.message);
+      } else if (isSignup) {
+        setMessage("Compte créé. Vérifie ton email pour confirmer l'inscription.");
       } else {
         router.push("/dashboard");
+        router.refresh();
       }
     } catch {
-      router.push("/dashboard");
+      setMessage("La connexion est indisponible pour le moment. Réessaie dans un instant.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +78,8 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           <p className="section-kicker">Assistant devis IA</p>
           <h1>{isSignup ? "Créez votre espace artisan." : "Retour à l'atelier."}</h1>
           <p>
-            Gérez les clients, préparez les devis, suivez les relances et gardez
-            une image professionnelle sans perdre vos soirées sur l&apos;administratif.
+            Gérez les clients, préparez les devis, suivez les relances et gardez une image
+            professionnelle sans perdre vos soirées sur l&apos;administratif.
           </p>
           <div className="auth-proof">
             <CheckCircle2 size={18} />
@@ -89,7 +112,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           </label>
           <label>
             Mot de passe
-            <input name="password" type="password" placeholder="••••••••" required />
+            <input name="password" type="password" placeholder="Mot de passe" required />
           </label>
           {isSignup ? (
             <label>
@@ -108,6 +131,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
             </label>
           ) : null}
 
+          {callbackMessage ? <p className="auth-error">{callbackMessage}</p> : null}
           {message ? <p className="auth-error">{message}</p> : null}
 
           <button className="primary-button auth-submit" type="submit" disabled={loading}>
@@ -115,6 +139,12 @@ export function AuthScreen({ mode }: AuthScreenProps) {
             {isSignup ? "Créer mon compte" : "Se connecter"}
             <ArrowRight size={17} />
           </button>
+
+          {!isSignup ? (
+            <p className="auth-switch">
+              <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+            </p>
+          ) : null}
 
           <p className="auth-switch">
             {isSignup ? "Déjà un compte ?" : "Pas encore inscrit ?"}{" "}

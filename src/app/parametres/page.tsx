@@ -1,8 +1,11 @@
 import { ToggleRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { requireAuthenticatedUser } from "@/lib/auth";
 import { settingsGroups } from "@/lib/data";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppShell active="/parametres" eyebrow="Configuration" title="Paramètres">
       <section className="settings-grid">

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { jsPDF } from "jspdf";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function GET() {
+  const user = await getAuthenticatedUser().catch(() => null);
+
+  if (!user) {
+    return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+  }
+
   const doc = new jsPDF();
 
   doc.setFont("helvetica", "bold");

@@ -7,6 +7,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
 const metrics = [
   {
@@ -102,7 +103,9 @@ const latestQuotes = [
   },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppShell
       active="/dashboard"

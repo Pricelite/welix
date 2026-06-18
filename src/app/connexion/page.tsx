@@ -1,5 +1,13 @@
 import { AuthScreen } from "@/components/AuthScreen";
 
-export default function ConnexionPage() {
-  return <AuthScreen mode="connexion" />;
+type ConnexionPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function ConnexionPage({ searchParams }: ConnexionPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+
+  return <AuthScreen mode="connexion" errorCode={params?.error} />;
 }

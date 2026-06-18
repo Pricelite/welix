@@ -1,8 +1,13 @@
-import { Plus, UsersRound } from "lucide-react";
+import { UsersRound } from "lucide-react";
+import { AddClientForm } from "@/components/AddClientForm";
 import { AppShell } from "@/components/AppShell";
-import { clientRows } from "@/lib/data";
+import { requireAuthenticatedUser } from "@/lib/auth";
+import { listClientsForUser } from "@/lib/workspace";
 
-export default function ClientsPage() {
+export default async function ClientsPage() {
+  const user = await requireAuthenticatedUser();
+  const clients = await listClientsForUser(user.id);
+
   return (
     <AppShell
       active="/clients"
@@ -10,45 +15,57 @@ export default function ClientsPage() {
       title="Liste des clients"
       action="Nouveau devis"
     >
+      <AddClientForm />
+
       <section className="workspace-panel">
         <div className="panel-title">
-          <h2>Clients actifs</h2>
-          <button className="secondary-button small-button">
-            <Plus size={16} />
-            Ajouter
-          </button>
+          <div>
+            <h2>Clients actifs</h2>
+            <p>
+              {clients.length
+                ? `${clients.length} client(s) enregistré(s)`
+                : "Aucun client pour le moment"}
+            </p>
+          </div>
         </div>
-        <div className="client-grid">
-          {clientRows.map((client) => (
-            <article className="client-card" key={client.email}>
-              <div className="avatar">
-                <UsersRound size={18} />
-              </div>
-              <div>
-                <h3>{client.name}</h3>
-                <p>{client.contact}</p>
-              </div>
-              <dl>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{client.email}</dd>
+
+        {clients.length ? (
+          <div className="client-grid">
+            {clients.map((client) => (
+              <article className="client-card" key={client.id}>
+                <div className="avatar">
+                  <UsersRound size={18} />
                 </div>
                 <div>
-                  <dt>Ville</dt>
-                  <dd>{client.city}</dd>
+                  <h3>{client.name}</h3>
+                  <p>{client.contact || "Contact à renseigner"}</p>
                 </div>
-                <div>
-                  <dt>CA signé</dt>
-                  <dd>{client.revenue}</dd>
-                </div>
-                <div>
-                  <dt>Dernier devis</dt>
-                  <dd>{client.lastQuote}</dd>
-                </div>
-              </dl>
-            </article>
-          ))}
-        </div>
+                <dl>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{client.email || "À renseigner"}</dd>
+                  </div>
+                  <div>
+                    <dt>Ville</dt>
+                    <dd>{client.city || "À renseigner"}</dd>
+                  </div>
+                  <div>
+                    <dt>CA signé</dt>
+                    <dd>{client.revenue || "0 EUR"}</dd>
+                  </div>
+                  <div>
+                    <dt>Dernier devis</dt>
+                    <dd>{client.last_quote || "Aucun devis"}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-state-text">
+            Commence par ajouter un client avec le formulaire ci-dessus.
+          </p>
+        )}
       </section>
     </AppShell>
   );
