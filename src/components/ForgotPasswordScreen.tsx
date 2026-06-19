@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export function ForgotPasswordScreen() {
@@ -48,9 +48,9 @@ export function ForgotPasswordScreen() {
       <section className="auth-layout">
         <div className="auth-copy">
           <p className="section-kicker">Récupération</p>
-          <h1>Récupère ton accès.</h1>
+          <h1>Récupérez votre accès.</h1>
           <p>
-            Entre ton email professionnel. Welix t&apos;enverra un lien pour choisir un
+            Entrez votre email professionnel. Welix vous enverra un lien pour choisir un
             nouveau mot de passe.
           </p>
           <div className="auth-proof">
@@ -64,7 +64,7 @@ export function ForgotPasswordScreen() {
             <Sparkles size={20} />
             <div>
               <h2>Mot de passe oublié</h2>
-              <p>On t&apos;envoie un lien sécurisé pour repartir proprement.</p>
+              <p>Nous vous envoyons un lien sécurisé pour repartir proprement.</p>
             </div>
           </div>
 

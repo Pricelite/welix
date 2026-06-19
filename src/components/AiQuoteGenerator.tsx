@@ -13,6 +13,7 @@ import {
   Sparkles,
   WandSparkles,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
 
 type GeneratedQuote = {
   description: string;
@@ -25,13 +26,18 @@ type GeneratedQuote = {
   total: number;
 };
 
+type ClientOption = {
+  id: string;
+  name: string;
+};
+
 const fallbackQuote: GeneratedQuote = {
   description:
-    "Remplacement d'un chauffe-eau électrique 200L avec dépose de l'ancien équipement, raccordements et contrôle de mise en service.",
+    "Remplacement d'un chauffe-eau \u00e9lectrique 200 L avec d\u00e9pose de l'ancien \u00e9quipement, raccordements et contr\u00f4le de mise en service.",
   material:
-    "Chauffe-eau 200L, groupe de sécurité, raccords diélectriques, flexibles, fixations et consommables.",
+    "Chauffe-eau 200 L, groupe de s\u00e9curit\u00e9, raccords di\u00e9lectriques, flexibles, fixations et consommables.",
   labor:
-    "Dépose, évacuation, pose du nouveau ballon, raccordement hydraulique et électrique, essais.",
+    "D\u00e9pose, \u00e9vacuation, pose du nouveau ballon, raccordement hydraulique et \u00e9lectrique, essais.",
   estimatedTime: "3 h 30",
   recommendedPrice: 1280,
   vatRate: 10,
@@ -39,9 +45,9 @@ const fallbackQuote: GeneratedQuote = {
   total: 1408,
 };
 
-export function AiQuoteGenerator() {
-  const [clientName, setClientName] = useState("");
-  const [prompt, setPrompt] = useState("Remplacement d'un chauffe-eau 200L");
+export function AiQuoteGenerator({ clients }: { clients: ClientOption[] }) {
+  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [prompt, setPrompt] = useState("Remplacement d'un chauffe-eau 200 L");
   const [status, setStatus] = useState<"done" | "generating">("generating");
   const [quote, setQuote] = useState<GeneratedQuote>(fallbackQuote);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "saving">("idle");
@@ -52,28 +58,20 @@ export function AiQuoteGenerator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function formatEuro(value: number) {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-
   function getGeneratedItems(currentQuote: GeneratedQuote) {
     return [
       { label: "Description", value: currentQuote.description, icon: WandSparkles },
-      { label: "Matériel", value: currentQuote.material, icon: PackageCheck },
-      { label: "Main d'oeuvre", value: currentQuote.labor, icon: Hammer },
-      { label: "Temps estimé", value: currentQuote.estimatedTime, icon: Clock3 },
+      { label: "Mat\u00e9riel", value: currentQuote.material, icon: PackageCheck },
+      { label: "Main d'\u0153uvre", value: currentQuote.labor, icon: Hammer },
+      { label: "Temps estim\u00e9", value: currentQuote.estimatedTime, icon: Clock3 },
       {
-        label: "Prix conseillé",
-        value: `${formatEuro(currentQuote.recommendedPrice)} HT`,
+        label: "Prix conseill\u00e9",
+        value: `${formatCurrency(currentQuote.recommendedPrice)} HT`,
         icon: Euro,
       },
       {
         label: "TVA",
-        value: `${currentQuote.vatRate}% - ${formatEuro(currentQuote.vatAmount)}`,
+        value: `${currentQuote.vatRate}% - ${formatCurrency(currentQuote.vatAmount)}`,
         icon: Percent,
       },
     ];
@@ -94,14 +92,14 @@ export function AiQuoteGenerator() {
       const data = (await response.json()) as { error?: string; quote?: GeneratedQuote };
 
       if (!response.ok) {
-        setError(data.error || "Impossible de générer le devis.");
+        setError(data.error || "Impossible de g\u00e9n\u00e9rer le devis.");
         setQuote(fallbackQuote);
       } else if (data.quote) {
         setQuote(data.quote);
       }
     } catch {
       setQuote(fallbackQuote);
-      setError("Impossible de générer le devis pour le moment.");
+      setError("Impossible de g\u00e9n\u00e9rer le devis pour le moment.");
     }
 
     await minimumDelay;
@@ -109,6 +107,11 @@ export function AiQuoteGenerator() {
   }
 
   async function saveQuote() {
+    if (!clientId) {
+      setError("S\u00e9lectionne d'abord un client.");
+      return;
+    }
+
     setSaveState("saving");
     setError("");
 
@@ -117,8 +120,8 @@ export function AiQuoteGenerator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientName,
-          trade: "Général",
+          clientId,
+          trade: "G\u00e9n\u00e9ral",
           description: quote.description,
           material: quote.material,
           labor: quote.labor,
@@ -146,6 +149,7 @@ export function AiQuoteGenerator() {
 
   const isGenerating = status === "generating";
   const generatedItems = getGeneratedItems(quote);
+  const hasClients = clients.length > 0;
 
   return (
     <section className="ai-quote-interface">
@@ -153,19 +157,29 @@ export function AiQuoteGenerator() {
         <div className="panel-title">
           <div>
             <p className="section-kicker">Assistant IA</p>
-            <h2>Écris le besoin, Welix prépare le devis.</h2>
+            <h2>{"\u00c9cris le besoin, Welix pr\u00e9pare le devis."}</h2>
           </div>
           <Sparkles size={20} />
         </div>
 
         <label className="ai-prompt-label">
-          Nom du client
-          <input
-            value={clientName}
-            onChange={(event) => setClientName(event.target.value)}
-            placeholder="Maison Laurent"
-            aria-label="Nom du client"
-          />
+          Client
+          <select
+            value={clientId}
+            onChange={(event) => setClientId(event.target.value)}
+            aria-label="Client du devis"
+            disabled={!hasClients}
+          >
+            {hasClients ? (
+              clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))
+            ) : (
+              <option value="">{"Ajoute d'abord un client"}</option>
+            )}
+          </select>
         </label>
 
         <label className="ai-prompt-label">
@@ -183,30 +197,38 @@ export function AiQuoteGenerator() {
           onClick={generateQuote}
           disabled={isGenerating}
         >
-          {isGenerating ? "Génération en cours" : "Générer le devis"}
+          {isGenerating ? "G\u00e9n\u00e9ration en cours" : "G\u00e9n\u00e9rer le devis"}
           <Sparkles size={17} />
         </button>
 
-        <div className="ai-generation-steps" aria-label="Étapes de génération">
+        <div className="ai-generation-steps" aria-label={"\u00c9tapes de g\u00e9n\u00e9ration"}>
           <span className={isGenerating ? "active" : "done"}>Analyse du chantier</span>
-          <span className={isGenerating ? "active delay-one" : "done"}>Calcul du matériel</span>
+          <span className={isGenerating ? "active delay-one" : "done"}>
+            {"Calcul du mat\u00e9riel"}
+          </span>
           <span className={isGenerating ? "active delay-two" : "done"}>Estimation du prix</span>
         </div>
+
+        {!hasClients ? (
+          <p className="auth-error">
+            Ajoute au moins un client avant d&apos;enregistrer un devis.
+          </p>
+        ) : null}
       </div>
 
       <div className="workspace-panel ai-result-panel">
         <div className="ai-result-header">
           <div>
-            <p className="section-kicker">Résultat généré</p>
+            <p className="section-kicker">{"R\u00e9sultat g\u00e9n\u00e9r\u00e9"}</p>
             <h2>{prompt}</h2>
           </div>
           <span className={`ai-status ${isGenerating ? "loading" : "ready"}`}>
-            {isGenerating ? "Welix travaille" : "Prêt"}
+            {isGenerating ? "Welix travaille" : "Pr\u00eat"}
           </span>
         </div>
 
         {isGenerating ? (
-          <div className="ai-skeleton" aria-label="Génération du devis">
+          <div className="ai-skeleton" aria-label={"G\u00e9n\u00e9ration du devis"}>
             <span />
             <span />
             <span />
@@ -232,21 +254,21 @@ export function AiQuoteGenerator() {
             <div className="ai-total-card">
               <div>
                 <span>Total TTC</span>
-                <strong>{formatEuro(quote.total)}</strong>
+                <strong>{formatCurrency(quote.total)}</strong>
               </div>
               <CheckCircle2 size={22} />
             </div>
 
             {saveState === "saved" ? (
               <p className="auth-success">
-                Devis enregistré. Tu peux maintenant le retrouver dans l&apos;historique.
+                {"Devis enregistr\u00e9. Tu peux maintenant le retrouver dans l'historique."}
               </p>
             ) : (
               <button
                 className="secondary-button ai-send-button"
                 type="button"
                 onClick={saveQuote}
-                disabled={saveState === "saving"}
+                disabled={saveState === "saving" || !hasClients}
               >
                 {saveState === "saving" ? <Loader2 className="spin-icon" size={17} /> : null}
                 Enregistrer le devis

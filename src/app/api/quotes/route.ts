@@ -1,5 +1,8 @@
-import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { fetchQuoteRecord, quoteSelect, syncClientSnapshot } from "@/lib/crm-server";
+import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
+import { quotePayloadSchema } from "@/lib/schemas";
+import { sanitizeNullableText, sanitizePlainText } from "@/lib/sanitize";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 function createQuoteNumber() {
@@ -9,122 +12,98 @@ function createQuoteNumber() {
   return `DEV-${year}-${suffix}`;
 }
 
+function roundAmount(value: number) {
+  return Number(value.toFixed(2));
+}
+
+export async function GET() {
+  try {
+    const user = await getAuthenticatedUser().catch(() => null);
+
+    if (!user) {
+      throw new ApiError("Authentification requise", 401);
+    }
+
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase
+      .from("quotes")
+      .select(quoteSelect)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(`Impossible de charger les devis: ${error.message}`);
+    }
+
+    return jsonSuccess({ quotes: data ?? [] });
+  } catch (error) {
+    return jsonError(error, "Erreur serveur lors du chargement des devis");
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser().catch(() => null);
 
     if (!user) {
-      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+      throw new ApiError("Authentification requise", 401);
     }
 
-    const body = (await request.json().catch(() => null)) as
-      | {
-          clientName?: string;
-          trade?: string;
-          description?: string;
-          material?: string;
-          labor?: string;
-          estimatedTime?: string;
-          recommendedPrice?: number;
-          vatRate?: number;
-          vatAmount?: number;
-          total?: number;
-        }
-      | null;
-
-    if (!body?.description || typeof body.total !== "number") {
-      return NextResponse.json({ error: "Le devis est incomplet" }, { status: 400 });
-    }
-
-    const quoteNumber = createQuoteNumber();
-    const today = new Date().toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    const clientName = body.clientName?.trim() || "Client à renseigner";
-    const recommendedPrice = typeof body.recommendedPrice === "number" ? body.recommendedPrice : null;
-    const vatRate = typeof body.vatRate === "number" ? body.vatRate : null;
-    const vatAmount = typeof body.vatAmount === "number" ? body.vatAmount : null;
-    const amountLabel = new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(body.total);
-
+    const body = await parseJson(request, quotePayloadSchema);
     const supabase = createSupabaseAdminClient();
-    const { error } = await supabase.from("quotes").insert({
-      user_id: user.id,
-      quote_number: quoteNumber,
-      client_name: clientName,
-      trade: body.trade?.trim() || "Général",
-      amount: amountLabel,
-      status: "Brouillon",
-      date: today,
-      description: body.description,
-      material: body.material || null,
-      labor: body.labor || null,
-      estimated_time: body.estimatedTime || null,
-      recommended_price: recommendedPrice,
-      vat_rate: vatRate,
-      vat_amount: vatAmount,
-      total: body.total,
-    });
-
-    if (error) {
-      return NextResponse.json(
-        { error: `Impossible d'enregistrer le devis: ${error.message}` },
-        { status: 500 },
-      );
-    }
-
-    const { error: clientUpdateError } = await supabase
+    const { data: client, error: clientError } = await supabase
       .from("clients")
-      .update({ last_quote: quoteNumber })
+      .select("id")
       .eq("user_id", user.id)
-      .eq("name", clientName);
-
-    if (clientUpdateError) {
-      return NextResponse.json(
-        { error: `Devis créé, mais client non synchronisé: ${clientUpdateError.message}` },
-        { status: 500 },
-      );
-    }
-
-    const { data: existingClient } = await supabase
-      .from("clients")
-      .select("revenue")
-      .eq("user_id", user.id)
-      .eq("name", clientName)
+      .eq("id", body.clientId)
       .maybeSingle();
 
-    const previousRevenue = (existingClient as { revenue?: string | null } | null)?.revenue ?? "0 EUR";
-    const previousMatch = previousRevenue.match(/[\d\s.,]+/);
-    const previousValue = previousMatch
-      ? Number(previousMatch[0].replace(/\s/g, "").replace(",", "."))
-      : 0;
-    const nextRevenue = new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(previousValue + body.total);
+    if (clientError) {
+      throw new Error(`Impossible de charger le client: ${clientError.message}`);
+    }
 
-    await supabase
-      .from("clients")
-      .update({ revenue: nextRevenue })
-      .eq("user_id", user.id)
-      .eq("name", clientName);
+    if (!client) {
+      throw new ApiError("Client introuvable", 404);
+    }
 
-    return NextResponse.json({ ok: true, quoteNumber });
+    const total = roundAmount(body.total);
+    const recommendedPrice = roundAmount(body.recommendedPrice);
+    const vatRate = roundAmount(body.vatRate);
+    const vat = roundAmount(body.vatAmount);
+    const subtotal = roundAmount(recommendedPrice);
+
+    const { data: created, error } = await supabase
+      .from("quotes")
+      .insert({
+        user_id: user.id,
+        client_id: client.id,
+        quote_number: createQuoteNumber(),
+        trade: sanitizePlainText(body.trade, 120),
+        amount: total,
+        status: body.status ?? "Brouillon",
+        date: new Date().toISOString(),
+        description: sanitizePlainText(body.description, 3000),
+        material: sanitizeNullableText(body.material, 2000),
+        labor: sanitizeNullableText(body.labor, 2000),
+        estimated_time: sanitizeNullableText(body.estimatedTime, 120),
+        recommended_price: recommendedPrice,
+        vat_rate: vatRate,
+        vat,
+        subtotal,
+        total,
+      })
+      .select("id")
+      .single();
+
+    if (error || !created) {
+      throw new Error(`Impossible d'enregistrer le devis: ${error?.message ?? "création incomplète"}`);
+    }
+
+    await syncClientSnapshot(supabase, user.id, client.id);
+    const quote = await fetchQuoteRecord(supabase, user.id, created.id);
+
+    return jsonSuccess({ ok: true, quote });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? `Erreur serveur lors de l'enregistrement du devis: ${error.message}`
-            : "Erreur serveur lors de l'enregistrement du devis",
-      },
-      { status: 500 },
-    );
+    return jsonError(error, "Erreur serveur lors de l'enregistrement du devis");
   }
 }

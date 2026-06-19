@@ -54,7 +54,7 @@ export function AddClientForm() {
       <div className="panel-title">
         <div>
           <h2>Ajouter un client</h2>
-          <p>Crée une première fiche client pour alimenter ton espace.</p>
+          <p>Crée une fiche client complète pour alimenter ton espace.</p>
         </div>
       </div>
       <div className="simple-form-grid">
@@ -67,7 +67,7 @@ export function AddClientForm() {
           <input name="contact" placeholder="Claire Laurent" />
         </label>
         <label>
-          Email
+          E-mail
           <input name="email" type="email" placeholder="contact@client.fr" />
         </label>
         <label>

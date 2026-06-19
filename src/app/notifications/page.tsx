@@ -1,51 +1,60 @@
-import { Bell, CheckCircle2, Clock3 } from "lucide-react";
+import { Bell } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireAuthenticatedUser } from "@/lib/auth";
-
-const notifications = [
-  {
-    title: "Devis accepté",
-    detail: "Atelier Moreau a validé DEV-2026-047.",
-    time: "Il y a 8 min",
-  },
-  {
-    title: "Relance à envoyer",
-    detail: "Cabinet Martin n'a pas répondu depuis 7 jours.",
-    time: "Aujourd'hui",
-  },
-  {
-    title: "Facture payée",
-    detail: "Maison Laurent a réglé FAC-2026-018.",
-    time: "Hier",
-  },
-];
+import { getDashboardSnapshot } from "@/lib/workspace";
 
 export default async function NotificationsPage() {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
+  const snapshot = await getDashboardSnapshot(user.id);
 
   return (
     <AppShell active="/notifications" eyebrow="Centre d'activité" title="Notifications">
-      <section className="workspace-panel recent-activity-panel">
-        <div className="panel-title">
-          <div>
-            <h2>Notifications intelligentes</h2>
-            <p>Relances, signatures, paiements et actions importantes.</p>
+      <Card>
+        <CardHeader>
+          <div className="card-header-inline">
+            <div>
+              <CardTitle>Notifications intelligentes</CardTitle>
+              <CardDescription>Relances, signatures, paiements et points d&apos;attention</CardDescription>
+            </div>
+            <Badge tone="info">
+              <Bell size={14} />
+              {snapshot.notifications.length}
+            </Badge>
           </div>
-          <Bell size={18} />
-        </div>
-        <div className="notification-list">
-          {notifications.map((notification, index) => (
-            <article className="notification-item" key={notification.title}>
-              {index === 0 ? <CheckCircle2 size={18} /> : <Clock3 size={18} />}
-              <div>
-                <strong>{notification.title}</strong>
-                <p>{notification.detail}</p>
+        </CardHeader>
+        <CardContent className="notification-stack">
+          {snapshot.notifications.length ? (
+            snapshot.notifications.map((notification) => (
+              <div className="notification-shell" key={notification.id}>
+                <Avatar initials={notification.title.slice(0, 1)} />
+                <div>
+                  <strong>{notification.title}</strong>
+                  <p>{notification.detail}</p>
+                </div>
+                <span>{notification.time}</span>
               </div>
-              <time>{notification.time}</time>
-            </article>
-          ))}
-        </div>
-      </section>
+            ))
+          ) : (
+            <EmptyState
+              action={<Button size="sm" variant="secondary">Continuer le travail</Button>}
+              description="Les notifications apparaîtront ici dès que l'espace détectera des signatures, paiements ou relances à traiter."
+              icon={<Bell size={18} />}
+              title="Aucune notification pour le moment"
+            />
+          )}
+        </CardContent>
+      </Card>
     </AppShell>
   );
 }

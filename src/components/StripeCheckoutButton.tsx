@@ -1,44 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Loader2 } from "lucide-react";
 
-export function StripeCheckoutButton() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+type StripeCheckoutButtonProps = {
+  action?: "checkout" | "portal" | "cancel" | "resume" | "upgrade" | "downgrade";
+  label: string;
+  plan?: "starter" | "pro";
+  priceId?: string;
+  variant?: "primary" | "secondary";
+};
 
-  async function checkout() {
-    setLoading(true);
-    setError("");
+export function StripeCheckoutButton({
+  action = "checkout",
+  label,
+  plan = "pro",
+  priceId,
+  variant = "primary",
+}: StripeCheckoutButtonProps) {
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const endpoint = action === "checkout" ? "/api/stripe/checkout" : "/api/stripe/manage";
+      const payload =
+        action === "checkout"
+          ? { plan }
+          : {
+              action,
+              priceId,
+            };
 
-    try {
-      const response = await fetch("/api/stripe/checkout", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "pro" }),
+        body: JSON.stringify(payload),
       });
+
       const data = (await response.json()) as { url?: string; error?: string };
 
+      if (!response.ok) {
+        throw new Error(data.error || "Action Stripe indisponible");
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
       if (data.url) {
         window.location.href = data.url;
         return;
       }
 
-      setError(data.error || "Impossible de démarrer le paiement pour le moment.");
-    } catch {
-      setError("Impossible de démarrer le paiement pour le moment.");
-    } finally {
-      setLoading(false);
-    }
-  }
+      window.location.reload();
+    },
+  });
 
   return (
     <>
-      <button className="primary-button large-button" type="button" onClick={checkout}>
-        {loading ? <Loader2 className="spin-icon" size={18} /> : <ArrowRight size={18} />}
-        Passer à Pro
+      <button
+        className={variant === "primary" ? "primary-button large-button" : "secondary-button large-button"}
+        type="button"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+      >
+        {mutation.isPending ? <Loader2 className="spin-icon" size={18} /> : <ArrowRight size={18} />}
+        {label}
       </button>
-      {error ? <p className="auth-error">{error}</p> : null}
+      {mutation.error ? <p className="auth-error">{mutation.error.message}</p> : null}
     </>
   );
 }

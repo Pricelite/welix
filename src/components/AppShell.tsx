@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowUpRight, Search, Sparkles } from "lucide-react";
-import { navItems } from "@/lib/data";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowUpRight, Command, Search, Sparkles } from "lucide-react";
 import { MotionReveal } from "@/components/MotionReveal";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
+import { navItems } from "@/lib/data";
 
 type AppShellProps = {
   active: string;
@@ -12,64 +13,73 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-export function AppShell({
-  active,
-  title,
-  eyebrow,
-  action,
-  children,
-}: AppShellProps) {
+export function AppShell({ active, title, eyebrow, action, children }: AppShellProps) {
   return (
-    <main className="app-page">
-      <aside className="sidebar" aria-label="Navigation principale">
-        <Link className="brand brand-sidebar" href="/">
-          <span className="brand-mark">W</span>
-          <span>Welix</span>
+    <main className="saas-shell">
+      <aside className="saas-sidebar" aria-label="Navigation principale">
+        <Link className="saas-brand" href="/">
+          <span className="saas-brand-mark">W</span>
+          <div>
+            <strong>Welix</strong>
+            <span>CRM artisans premium</span>
+          </div>
         </Link>
 
-        <nav className="side-nav">
+        <nav className="saas-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
+
             return (
               <Link
-                className={`side-link ${active === item.href ? "active" : ""}`}
+                className={`saas-nav-link ${active === item.href ? "active" : ""}`}
                 href={item.href}
                 key={item.href}
               >
-                <Icon size={17} strokeWidth={2.2} />
+                <Icon size={17} strokeWidth={2.1} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="assistant-strip">
-          <Sparkles size={18} />
-          <p>Assistant IA prêt pour chiffrer un chantier à partir de notes terrain.</p>
+        <div className="saas-sidebar-card">
+          <div className="saas-sidebar-card-head">
+            <Sparkles size={16} />
+            <span>Assistant IA</span>
+          </div>
+          <p>Prépare les devis, accélère les relances et garde une vision claire du pipeline.</p>
         </div>
       </aside>
 
-      <section className="workspace">
-        <header className="workspace-header">
+      <section className="saas-workspace">
+        <header className="saas-header">
           <div>
             <p className="section-kicker">{eyebrow}</p>
             <h1>{title}</h1>
           </div>
-          <div className="header-actions">
-            <label className="search-box">
-              <Search size={17} />
+
+          <div className="saas-header-actions">
+            <label className="saas-search">
+              <Search size={16} />
               <span className="sr-only">Rechercher</span>
-              <input placeholder="Rechercher" />
+              <input placeholder="Rechercher un client, un devis, une facture" />
+              <span className="saas-search-shortcut">
+                <Command size={12} />
+                K
+              </span>
             </label>
             <ThemeToggle />
             {action ? (
-              <Link className="primary-button small-button" href="/devis/nouveau">
-                {action}
-                <ArrowUpRight size={16} />
+              <Link href="/devis/nouveau">
+                <Button size="md">
+                  {action}
+                  <ArrowUpRight size={16} />
+                </Button>
               </Link>
             ) : null}
           </div>
         </header>
+
         <MotionReveal>{children}</MotionReveal>
       </section>
     </main>

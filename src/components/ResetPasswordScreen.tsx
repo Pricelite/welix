@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export function ResetPasswordScreen() {
@@ -86,7 +86,7 @@ export function ResetPasswordScreen() {
       if (updateError) {
         setError(updateError.message);
       } else {
-        setMessage("Mot de passe mis à jour. Tu peux maintenant te reconnecter.");
+        setMessage("Mot de passe mis à jour. Vous pouvez maintenant vous reconnecter.");
         window.setTimeout(() => {
           router.push("/connexion");
           router.refresh();
@@ -109,11 +109,11 @@ export function ResetPasswordScreen() {
       <section className="auth-layout">
         <div className="auth-copy">
           <p className="section-kicker">Sécurité</p>
-          <h1>Choisis un nouveau mot de passe.</h1>
-          <p>Une fois validé, tu pourras revenir sur la page de connexion normalement.</p>
+          <h1>Choisissez un nouveau mot de passe.</h1>
+          <p>Une fois validé, vous pourrez revenir sur la page de connexion normalement.</p>
           <div className="auth-proof">
             <CheckCircle2 size={18} />
-            <span>Utilise au moins 8 caractères avec un chiffre et un symbole</span>
+            <span>Utilisez au moins 8 caractères avec un chiffre et un symbole</span>
           </div>
         </div>
 
@@ -151,11 +151,7 @@ export function ResetPasswordScreen() {
           {message ? <p className="auth-success">{message}</p> : null}
           {error ? <p className="auth-error">{error}</p> : null}
 
-          <button
-            className="primary-button auth-submit"
-            type="submit"
-            disabled={loading || !ready}
-          >
+          <button className="primary-button auth-submit" type="submit" disabled={loading || !ready}>
             {loading ? <Loader2 className="spin-icon" size={17} /> : null}
             Enregistrer
             <ArrowRight size={17} />

@@ -11,6 +11,7 @@ export default async function SettingsPage() {
       <section className="settings-grid">
         {settingsGroups.map((group) => {
           const Icon = group.icon;
+
           return (
             <article className="workspace-panel setting-card" key={group.title}>
               <Icon size={22} />

@@ -26,7 +26,7 @@ const clientLogos = [
 const features = [
   {
     title: "Devis généré depuis une simple note",
-    text: "Décris le chantier comme tu le ferais sur WhatsApp. Welix structure les lignes, les quantités et les prix.",
+    text: "Décrivez le chantier comme sur WhatsApp. Welix structure les lignes, les quantités et les prix.",
     icon: WandSparkles,
   },
   {
@@ -36,7 +36,7 @@ const features = [
   },
   {
     title: "Clients et historique centralisés",
-    text: "Retrouve les contacts, les devis envoyés, les statuts et les relances sans chercher dans tes dossiers.",
+    text: "Retrouvez les contacts, les devis envoyés, les statuts et les relances sans chercher dans vos dossiers.",
     icon: UsersRound,
   },
   {
@@ -71,7 +71,7 @@ const faqs = [
   {
     question: "Welix remplace-t-il mon expertise métier ?",
     answer:
-      "Non. Welix accélère la mise en forme, propose une structure et aide à chiffrer plus vite. Tu gardes le contrôle final avant l'envoi.",
+      "Non. Welix accélère la mise en forme, propose une structure et aide à chiffrer plus vite. Vous gardez le contrôle final avant l'envoi.",
   },
   {
     question: "Puis-je créer un devis sans être à l'aise avec les logiciels ?",
@@ -86,7 +86,7 @@ const faqs = [
   {
     question: "Est-ce une vraie application ou une maquette ?",
     answer:
-      "Cette version présente l'expérience produit et les écrans clés. Elle peut ensuite être branchée à une base de données, l'authentification et l'IA.",
+      "Cette version présente l'expérience produit et les écrans clés. Elle peut ensuite être connectée à une base de données, à l'authentification et à l'IA.",
   },
 ];
 
@@ -132,9 +132,7 @@ export default function Home() {
               Assistant devis IA pour artisans
             </span>
             <h1 className="hero-title">Vos devis en moins de 2 minutes.</h1>
-            <p className="hero-subtitle">
-              L&apos;IA qui aide les artisans à gagner du temps.
-            </p>
+            <p className="hero-subtitle">L&apos;IA qui aide les artisans à gagner du temps.</p>
             <div className="hero-actions">
               <Link className="primary-button large-button" href="/inscription">
                 Essayer gratuitement
@@ -147,8 +145,7 @@ export default function Home() {
             </div>
             <div className="hero-metrics" aria-label="Bénéfices Welix">
               <span>
-                <Clock3 size={16} />
-                2 min par devis
+                <Clock3 size={16} />2 min par devis
               </span>
               <span>
                 <MousePointerClick size={16} />
@@ -207,8 +204,8 @@ export default function Home() {
           <p className="section-kicker">Capture de l&apos;application</p>
           <h2>Un devis clair, généré pendant que le chantier est encore frais.</h2>
           <p>
-            Welix transforme les notes terrain en document structuré, avec les
-            postes, les montants, le statut et les actions utiles.
+            Welix transforme les notes terrain en document structuré, avec les postes, les
+            montants, le statut et les actions utiles.
           </p>
         </div>
 
@@ -228,14 +225,14 @@ export default function Home() {
                 <p className="section-kicker">Création assistée</p>
                 <h3>Devis prêt à envoyer</h3>
               </div>
-              <span className="status status-envoyé">IA active</span>
+              <span className="status status-envoye">IA active</span>
             </div>
             <div className="capture-grid">
               <div className="capture-panel capture-prompt">
                 <span>Note chantier</span>
                 <p>
-                  Remplacer un chauffe-eau 200L, accès cave, évacuation ancien
-                  matériel, prévoir groupe sécurité.
+                  Remplacer un chauffe-eau 200L, accès cave, évacuation ancien matériel, prévoir
+                  groupe de sécurité.
                 </p>
               </div>
               <div className="capture-panel capture-total">
@@ -269,6 +266,7 @@ export default function Home() {
         <div className="feature-grid landing-feature-grid">
           {features.map((feature) => {
             const Icon = feature.icon;
+
             return (
               <article className="feature-card landing-feature-card" key={feature.title}>
                 <Icon size={22} />
@@ -293,7 +291,7 @@ export default function Home() {
                   <Star key={index} size={16} fill="currentColor" />
                 ))}
               </div>
-              <p>“{testimonial.quote}”</p>
+              <p>&ldquo;{testimonial.quote}&rdquo;</p>
               <div>
                 <strong>{testimonial.name}</strong>
                 <span>{testimonial.role}</span>
@@ -321,7 +319,7 @@ export default function Home() {
       <section className="final-cta landing-final-cta">
         <div>
           <p className="section-kicker">Prêt à gagner du temps ?</p>
-          <h2>Crée ton prochain devis avec Welix.</h2>
+          <h2>Créez votre prochain devis avec Welix.</h2>
         </div>
         <Link className="primary-button large-button" href="/inscription">
           Essayer gratuitement

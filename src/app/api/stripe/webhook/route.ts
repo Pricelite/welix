@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
 import { syncCheckoutSession, syncStripeSubscription } from "@/lib/billing";
+import { jsonError, jsonSuccess } from "@/lib/http";
 import { createStripeClient } from "@/lib/stripe";
 
 function normalizeSubscription(subscription: {
@@ -36,29 +36,23 @@ function normalizeSubscription(subscription: {
 }
 
 export async function POST(request: Request) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    return NextResponse.json({ error: "STRIPE_WEBHOOK_SECRET manquant" }, { status: 500 });
-  }
-
-  const stripe = createStripeClient();
-  const body = await request.text();
-  const signature = (await headers()).get("stripe-signature");
-
-  if (!signature) {
-    return NextResponse.json({ error: "Signature Stripe manquante" }, { status: 400 });
-  }
-
-  let event;
-
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch {
-    return NextResponse.json({ error: "Signature Stripe invalide" }, { status: 400 });
-  }
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  try {
+    if (!webhookSecret) {
+      throw new Error("STRIPE_WEBHOOK_SECRET manquant");
+    }
+
+    const stripe = createStripeClient();
+    const body = await request.text();
+    const signature = (await headers()).get("stripe-signature");
+
+    if (!signature) {
+      return jsonError(new Error("Signature Stripe manquante"), "Signature Stripe manquante");
+    }
+
+    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
@@ -83,6 +77,7 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object;
@@ -92,12 +87,9 @@ export async function POST(request: Request) {
       default:
         break;
     }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Webhook Stripe non traité" },
-      { status: 500 },
-    );
-  }
 
-  return NextResponse.json({ received: true });
+    return jsonSuccess({ received: true });
+  } catch (error) {
+    return jsonError(error, "Webhook Stripe non traité");
+  }
 }

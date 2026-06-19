@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthScreenProps = {
@@ -13,7 +13,8 @@ type AuthScreenProps = {
 
 const callbackMessages: Record<string, string> = {
   missing_code: "Le lien de connexion est incomplet. Réessaie depuis l'email reçu.",
-  auth_callback_failed: "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
+  auth_callback_failed:
+    "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
 };
 
 export function AuthScreen({ mode, errorCode }: AuthScreenProps) {

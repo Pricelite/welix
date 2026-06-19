@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Welix - Devis artisans assistés par IA",
@@ -15,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body>
+      <body className={manrope.variable}>
         <Providers>{children}</Providers>
       </body>
     </html>

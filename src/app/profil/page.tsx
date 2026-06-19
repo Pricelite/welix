@@ -1,7 +1,7 @@
 import { BadgeCheck, Camera, Mail } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getAccountSnapshot } from "@/lib/billing";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { getAccountSnapshot } from "@/lib/billing";
 
 function getInitials(input: string) {
   return input
@@ -40,7 +40,7 @@ export default async function ProfilePage() {
           </div>
           <h2>{fullName}</h2>
           <p>{title}</p>
-          <span className="status status-accepté">
+          <span className="status status-accepte">
             <BadgeCheck size={14} />
             Profil synchronisé
           </span>

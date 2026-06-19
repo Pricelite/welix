@@ -126,6 +126,10 @@ export async function getAccountSnapshot(userId: string) {
   };
 }
 
+export function hasActiveSubscription(status?: string | null) {
+  return status === "active" || status === "trialing" || status === "past_due";
+}
+
 async function updateProfileStripeCustomer(userId: string, customerId: string | null, email?: string | null) {
   const admin = createSupabaseAdminClient();
   const { error } = await admin

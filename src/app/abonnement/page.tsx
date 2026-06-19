@@ -1,8 +1,8 @@
 import { CheckCircle2, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StripeCheckoutButton } from "@/components/StripeCheckoutButton";
-import { getAccountSnapshot } from "@/lib/billing";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { getAccountSnapshot, hasActiveSubscription } from "@/lib/billing";
 
 const plans = [
   "Devis IA illimités",
@@ -31,22 +31,27 @@ function getSubscriptionLabel(status?: string | null) {
 export default async function SubscriptionPage() {
   const user = await requireAuthenticatedUser();
   const { subscription } = await getAccountSnapshot(user.id);
-  const hasActivePlan = subscription?.status === "active" || subscription?.status === "trialing";
+  const isActive = hasActiveSubscription(subscription?.status);
+  const starterPriceId = process.env.STRIPE_PRICE_ID_STARTER || "";
+  const proPriceId = process.env.STRIPE_PRICE_ID_PRO || "";
+  const currentPriceId = subscription?.stripe_price_id || "";
+  const canUpgrade = Boolean(isActive && proPriceId && currentPriceId && currentPriceId !== proPriceId);
+  const canDowngrade = Boolean(isActive && starterPriceId && currentPriceId === proPriceId);
 
   return (
-    <AppShell active="/abonnement" eyebrow="Billing" title="Abonnement">
+    <AppShell active="/abonnement" eyebrow="Facturation" title="Abonnement">
       <section className="subscription-layout">
         <article className="workspace-panel subscription-card">
           <div className="subscription-icon">
             <Sparkles size={24} />
           </div>
           <p className="section-kicker">Welix Pro</p>
-          <h2>Un assistant complet pour gérer tes devis.</h2>
+          <h2>Un assistant complet pour gérer les devis, la relation client et la facturation.</h2>
           <div className="subscription-price">
             <strong>29 EUR</strong>
             <span>/ mois</span>
           </div>
-          <p className={`status ${hasActivePlan ? "status-accepté" : "status-brouillon"}`}>
+          <p className={`status ${isActive ? "status-accepte" : "status-brouillon"}`}>
             {getSubscriptionLabel(subscription?.status)}
           </p>
           {subscription?.current_period_end ? (
@@ -55,7 +60,21 @@ export default async function SubscriptionPage() {
               {new Date(subscription.current_period_end).toLocaleDateString("fr-FR")}
             </p>
           ) : null}
-          <StripeCheckoutButton />
+
+          {!isActive ? <StripeCheckoutButton action="checkout" label="Passer à Pro" plan="pro" /> : null}
+          {isActive ? <StripeCheckoutButton action="portal" label="Gérer la facturation" variant="secondary" /> : null}
+          {canUpgrade ? (
+            <StripeCheckoutButton action="upgrade" label="Passer à l'offre Pro" priceId={proPriceId} variant="secondary" />
+          ) : null}
+          {canDowngrade ? (
+            <StripeCheckoutButton action="downgrade" label="Revenir à l'offre Starter" priceId={starterPriceId} variant="secondary" />
+          ) : null}
+          {subscription?.cancel_at_period_end ? (
+            <StripeCheckoutButton action="resume" label="Réactiver l'abonnement" variant="secondary" />
+          ) : null}
+          {isActive && !subscription?.cancel_at_period_end ? (
+            <StripeCheckoutButton action="cancel" label="Résilier à l'échéance" variant="secondary" />
+          ) : null}
         </article>
 
         <article className="workspace-panel">
@@ -73,7 +92,7 @@ export default async function SubscriptionPage() {
           </div>
           <div className="secure-note">
             <ShieldCheck size={18} />
-            Paiement sécurisé par Stripe Checkout.
+            Paiement sécurisé par Stripe Checkout, synchronisé avec Supabase.
           </div>
         </article>
       </section>
