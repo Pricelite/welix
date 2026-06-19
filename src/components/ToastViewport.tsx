@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { CheckCircle2, CircleAlert, X } from "lucide-react";
 
 export type ToastItem = {

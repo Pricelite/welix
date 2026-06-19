@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results
+.tmp-start.log
+.tmp-start.err.log
 
 # next.js
 /.next/
