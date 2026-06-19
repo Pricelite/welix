@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { CheckCircle2, CircleAlert, X } from "lucide-react";
 
 export type ToastItem = {
@@ -10,7 +10,7 @@ export type ToastItem = {
   tone: "success" | "error";
 };
 
-export function ToastViewport({
+function ToastViewportComponent({
   toasts,
   onDismiss,
 }: {
@@ -41,3 +41,5 @@ export function ToastViewport({
     </div>
   );
 }
+
+export const ToastViewport = memo(ToastViewportComponent);

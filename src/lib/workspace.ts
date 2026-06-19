@@ -249,13 +249,18 @@ function normalizeInvoice(row: InvoiceQueryRow): InvoiceRecord {
   };
 }
 
+const clientSelect =
+  "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)";
+const quoteSelect =
+  "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)";
+const invoiceSelect =
+  "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at, client:clients!invoices_client_id_fkey(id, name), quote:quotes!invoices_quote_id_fkey(quote_number)";
+
 export const listClientsForUser = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("clients")
-    .select(
-      "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)",
-    )
+    .select(clientSelect)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -270,9 +275,7 @@ export const listQuotesForUser = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("quotes")
-    .select(
-      "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)",
-    )
+    .select(quoteSelect)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -287,9 +290,7 @@ export const listInvoicesForUser = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("invoices")
-    .select(
-      "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at, client:clients!invoices_client_id_fkey(id, name), quote:quotes!invoices_quote_id_fkey(quote_number)",
-    )
+    .select(invoiceSelect)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -330,72 +331,131 @@ function buildGoals(revenue: number, clientCount: number, quoteCount: number): D
   ];
 }
 
-function buildNotifications(
-  clients: ClientRecord[],
-  quotes: QuoteRecord[],
-  invoices: InvoiceRecord[],
-): DashboardNotification[] {
-  const items: DashboardNotification[] = [];
-
-  const acceptedQuote = quotes.find((quote) => quote.status.toLowerCase() === "accept\u00e9");
-  if (acceptedQuote) {
-    items.push({
-      id: `quote-${acceptedQuote.id}`,
-      title: "Devis accepté",
-      detail: `${acceptedQuote.clientName} a validé ${acceptedQuote.quoteNumber}.`,
-      time: formatRelativeTime(acceptedQuote.updatedAt || acceptedQuote.createdAt),
-      tone: "success",
-    });
-  }
-
-  const lateInvoice = invoices.find(
-    (invoice) =>
-      invoice.status.toLowerCase() !== "pay\u00e9" &&
-      invoice.dueAt &&
-      new Date(invoice.dueAt).getTime() < Date.now(),
-  );
-  if (lateInvoice) {
-    items.push({
-      id: `invoice-${lateInvoice.id}`,
-      title: "Facture en retard",
-      detail: `${lateInvoice.invoiceNumber} attend encore un règlement client.`,
-      time: formatRelativeTime(lateInvoice.dueAt),
-      tone: "warning",
-    });
-  }
-
-  const newestClient = clients
-    .filter((client) => !client.archivedAt)
-    .sort((left, right) => (right.createdAt || "").localeCompare(left.createdAt || ""))[0];
-  if (newestClient) {
-    items.push({
-      id: `client-${newestClient.id}`,
-      title: "Nouveau client ajouté",
-      detail: `${newestClient.name} est maintenant visible dans la relation client.`,
-      time: formatRelativeTime(newestClient.createdAt),
-      tone: "info",
-    });
-  }
-
-  return items.slice(0, 3);
-}
-
 export const getDashboardSnapshot = cache(async (userId: string): Promise<DashboardSnapshot> => {
-  const [clients, quotes, invoices] = await Promise.all([
-    listClientsForUser(userId),
-    listQuotesForUser(userId),
-    listInvoicesForUser(userId),
+  const supabase = await createSupabaseServerClient();
+  const now = new Date();
+  const lateInvoiceThreshold = now.toISOString().slice(0, 10);
+  const revenueWindowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
+
+  const [
+    { count: clientCount, error: clientCountError },
+    { count: quoteCount, error: quoteCountError },
+    { count: invoiceCount, error: invoiceCountError },
+    { count: pendingQuotes, error: pendingQuotesError },
+    { data: latestQuotesRows, error: latestQuotesError },
+    { data: latestInvoicesRows, error: latestInvoicesError },
+    { data: acceptedQuoteRow, error: acceptedQuoteError },
+    { data: lateInvoiceRow, error: lateInvoiceError },
+    { data: newestClientRow, error: newestClientError },
+    { data: revenueWindowRows, error: revenueWindowError },
+  ] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("archived_at", null),
+    supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .neq("status", "Accepté"),
+    supabase
+      .from("quotes")
+      .select(quoteSelect)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("invoices")
+      .select(invoiceSelect)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("quotes")
+      .select(quoteSelect)
+      .eq("user_id", userId)
+      .eq("status", "Accepté")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("invoices")
+      .select(invoiceSelect)
+      .eq("user_id", userId)
+      .neq("status", "Payé")
+      .lt("due_at", lateInvoiceThreshold)
+      .order("due_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("clients")
+      .select(clientSelect)
+      .eq("user_id", userId)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("invoices")
+      .select("total, created_at")
+      .eq("user_id", userId)
+      .gte("created_at", revenueWindowStart),
   ]);
 
-  const activeClients = clients.filter((client) => !client.archivedAt);
-  const revenue = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
+  if (
+    clientCountError ||
+    quoteCountError ||
+    invoiceCountError ||
+    pendingQuotesError ||
+    latestQuotesError ||
+    latestInvoicesError ||
+    acceptedQuoteError ||
+    lateInvoiceError ||
+    newestClientError ||
+    revenueWindowError
+  ) {
+    throw new Error(
+      [
+        clientCountError,
+        quoteCountError,
+        invoiceCountError,
+        pendingQuotesError,
+        latestQuotesError,
+        latestInvoicesError,
+        acceptedQuoteError,
+        lateInvoiceError,
+        newestClientError,
+        revenueWindowError,
+      ]
+        .filter(Boolean)
+        .map((error) => error?.message)
+        .join(" | "),
+    );
+  }
+
+  const latestQuotes = ((latestQuotesRows as QuoteQueryRow[] | null) ?? []).map(normalizeQuote);
+  const latestInvoices = ((latestInvoicesRows as InvoiceQueryRow[] | null) ?? []).map(normalizeInvoice);
+  const acceptedQuote = acceptedQuoteRow ? normalizeQuote(acceptedQuoteRow as QuoteQueryRow) : null;
+  const lateInvoice = lateInvoiceRow ? normalizeInvoice(lateInvoiceRow as InvoiceQueryRow) : null;
+  const newestClient = newestClientRow ? normalizeClient(newestClientRow as ClientQueryRow) : null;
+  const revenueRows = (revenueWindowRows as Array<{ total: number | null; created_at: string | null }> | null) ?? [];
+  const revenue = revenueRows.reduce((sum, invoice) => sum + (invoice.total ?? 0), 0);
 
   const metrics = {
-    revenue,
-    clientCount: activeClients.length,
-    quoteCount: quotes.length,
-    invoiceCount: invoices.length,
-    pendingQuotes: quotes.filter((quote) => quote.status.toLowerCase() !== "accept\u00e9").length,
+    revenue: Number(revenue.toFixed(2)),
+    clientCount: clientCount ?? 0,
+    quoteCount: quoteCount ?? 0,
+    invoiceCount: invoiceCount ?? 0,
+    pendingQuotes: pendingQuotes ?? 0,
   };
 
   const monthlyRevenue = Array.from({ length: 6 }, (_, index) => {
@@ -404,16 +464,16 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
     date.setHours(0, 0, 0, 0);
 
     const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-    const value = invoices
+    const value = revenueRows
       .filter((invoice) => {
-        const createdAt = invoice.createdAt ? new Date(invoice.createdAt) : null;
+        const createdAt = invoice.created_at ? new Date(invoice.created_at) : null;
         return (
           createdAt &&
           !Number.isNaN(createdAt.getTime()) &&
           `${createdAt.getFullYear()}-${createdAt.getMonth()}` === monthKey
         );
       })
-      .reduce((sum, invoice) => sum + invoice.total, 0);
+      .reduce((sum, invoice) => sum + (invoice.total ?? 0), 0);
 
     return {
       month: new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(date),
@@ -422,13 +482,13 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
   });
 
   const activity = [
-    ...quotes.slice(0, 3).map((quote) => ({
+    ...latestQuotes.slice(0, 3).map((quote) => ({
       id: `quote-${quote.id}`,
       title: `Devis ${quote.status.toLowerCase()}`,
       detail: `${quote.quoteNumber} - ${quote.clientName}`,
       time: formatRelativeTime(quote.updatedAt || quote.createdAt),
     })),
-    ...invoices.slice(0, 2).map((invoice) => ({
+    ...latestInvoices.slice(0, 2).map((invoice) => ({
       id: `invoice-${invoice.id}`,
       title: `Facture ${invoice.status.toLowerCase()}`,
       detail: `${invoice.invoiceNumber} - ${invoice.clientName}`,
@@ -436,13 +496,45 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
     })),
   ].slice(0, 5);
 
+  const notifications: DashboardNotification[] = [];
+
+  if (acceptedQuote) {
+    notifications.push({
+      id: `quote-${acceptedQuote.id}`,
+      title: "Devis accepté",
+      detail: `${acceptedQuote.clientName} a validé ${acceptedQuote.quoteNumber}.`,
+      time: formatRelativeTime(acceptedQuote.updatedAt || acceptedQuote.createdAt),
+      tone: "success",
+    });
+  }
+
+  if (lateInvoice) {
+    notifications.push({
+      id: `invoice-${lateInvoice.id}`,
+      title: "Facture en retard",
+      detail: `${lateInvoice.invoiceNumber} attend encore un règlement client.`,
+      time: formatRelativeTime(lateInvoice.dueAt),
+      tone: "warning",
+    });
+  }
+
+  if (newestClient) {
+    notifications.push({
+      id: `client-${newestClient.id}`,
+      title: "Nouveau client ajouté",
+      detail: `${newestClient.name} est maintenant visible dans la relation client.`,
+      time: formatRelativeTime(newestClient.createdAt),
+      tone: "info",
+    });
+  }
+
   return {
     metrics,
     monthlyRevenue,
     activity,
-    notifications: buildNotifications(activeClients, quotes, invoices),
-    goals: buildGoals(revenue, activeClients.length, quotes.length),
-    latestQuotes: quotes.slice(0, 4),
-    latestInvoices: invoices.slice(0, 4),
+    notifications: notifications.slice(0, 3),
+    goals: buildGoals(metrics.revenue, metrics.clientCount, metrics.quoteCount),
+    latestQuotes,
+    latestInvoices,
   };
 });

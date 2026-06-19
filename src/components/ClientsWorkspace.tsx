@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -70,6 +70,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
   const [busyClientId, setBusyClientId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [listPulse, setListPulse] = useState(false);
+  const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
     setClients(initialClients);
@@ -87,53 +88,60 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
     return () => window.clearTimeout(timer);
   }, [toasts]);
 
-  const filteredClients = clients
-    .filter((client) => {
-      if (visibility === "active" && client.archivedAt) {
-        return false;
-      }
+  const filteredClients = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
 
-      if (visibility === "archived" && !client.archivedAt) {
-        return false;
-      }
+    return clients
+      .filter((client) => {
+        if (visibility === "active" && client.archivedAt) {
+          return false;
+        }
 
-      if (!query.trim()) {
-        return true;
-      }
+        if (visibility === "archived" && !client.archivedAt) {
+          return false;
+        }
 
-      const haystack = [client.name, client.contact, client.email, client.city]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+        if (!normalizedQuery) {
+          return true;
+        }
 
-      return haystack.includes(query.trim().toLowerCase());
-    })
-    .sort((left, right) => {
-      if (sortBy === "name") {
-        return left.name.localeCompare(right.name, "fr");
-      }
+        const haystack = [client.name, client.contact, client.email, client.city]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      if (sortBy === "revenue") {
-        return right.revenue - left.revenue;
-      }
+        return haystack.includes(normalizedQuery);
+      })
+      .sort((left, right) => {
+        if (sortBy === "name") {
+          return left.name.localeCompare(right.name, "fr");
+        }
 
-      return (right.createdAt || "").localeCompare(left.createdAt || "");
-    });
+        if (sortBy === "revenue") {
+          return right.revenue - left.revenue;
+        }
 
-  const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
+        return (right.createdAt || "").localeCompare(left.createdAt || "");
+      });
+  }, [clients, deferredQuery, sortBy, visibility]);
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredClients.length / pageSize)), [filteredClients]);
   const safePage = Math.min(page, totalPages);
-  const visibleClients = filteredClients.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visibleClients = useMemo(
+    () => filteredClients.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filteredClients, safePage],
+  );
 
-  function showToast(title: string, message: string, tone: ToastItem["tone"]) {
+  const showToast = useCallback((title: string, message: string, tone: ToastItem["tone"]) => {
     setToasts((current) => [...current, buildToast(title, message, tone)]);
-  }
+  }, []);
 
-  function openCreateModal() {
+  const openCreateModal = useCallback(() => {
     setEditingClientId("new");
     setDraft(emptyDraft);
-  }
+  }, []);
 
-  function openEditModal(client: ClientRecord) {
+  const openEditModal = useCallback((client: ClientRecord) => {
     setEditingClientId(client.id);
     setDraft({
       name: client.name,
@@ -141,16 +149,16 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
       email: client.email || "",
       city: client.city || "",
     });
-  }
+  }, []);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     if (saving) {
       return;
     }
 
     setEditingClientId(null);
     setDraft(emptyDraft);
-  }
+  }, [saving]);
 
   async function submitClient() {
     if (!draft.name.trim()) {
@@ -315,8 +323,11 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               <span className="sr-only">Rechercher un client</span>
               <input
                 onChange={(event) => {
-                  setPage(1);
-                  setQuery(event.target.value);
+                  const value = event.target.value;
+                  startTransition(() => {
+                    setPage(1);
+                    setQuery(value);
+                  });
                 }}
                 placeholder="Rechercher un client"
                 value={query}
@@ -326,8 +337,11 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
             <select
               className="crm-select"
               onChange={(event) => {
-                setPage(1);
-                setVisibility(event.target.value as "active" | "archived" | "all");
+                const nextVisibility = event.target.value as "active" | "archived" | "all";
+                startTransition(() => {
+                  setPage(1);
+                  setVisibility(nextVisibility);
+                });
               }}
               value={visibility}
             >
@@ -338,7 +352,10 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
 
             <select
               className="crm-select"
-              onChange={(event) => setSortBy(event.target.value as "recent" | "name" | "revenue")}
+              onChange={(event) => {
+                const nextSort = event.target.value as "recent" | "name" | "revenue";
+                startTransition(() => setSortBy(nextSort));
+              }}
               value={sortBy}
             >
               <option value="recent">{"Tri : plus récents"}</option>

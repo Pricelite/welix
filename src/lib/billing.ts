@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -91,15 +92,21 @@ export async function upsertProfileFromUser(user: {
   }
 }
 
-export async function getAccountSnapshot(userId: string) {
+export const getAccountSnapshot = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
 
   const [{ data: profile, error: profileError }, { data: subscription, error: subscriptionError }] =
     await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, company_name, trade, phone, address, stripe_customer_id")
+        .eq("id", userId)
+        .maybeSingle(),
       supabase
         .from("subscriptions")
-        .select("*")
+        .select(
+          "id, user_id, stripe_customer_id, stripe_subscription_id, stripe_price_id, status, current_period_start, current_period_end, cancel_at_period_end, canceled_at",
+        )
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -124,7 +131,7 @@ export async function getAccountSnapshot(userId: string) {
     profile: (profile as ProfileRow | null) ?? null,
     subscription: (subscription as SubscriptionRow | null) ?? null,
   };
-}
+});
 
 export function hasActiveSubscription(status?: string | null) {
   return status === "active" || status === "trialing" || status === "past_due";

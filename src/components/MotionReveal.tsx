@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { domAnimation, LazyMotion, m } from "framer-motion";
+import { memo } from "react";
 
-export function MotionReveal({
+function MotionRevealComponent({
   children,
   delay = 0,
 }: {
@@ -10,12 +11,16 @@ export function MotionReveal({
   delay?: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
+    <LazyMotion features={domAnimation}>
+      <m.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {children}
+      </m.div>
+    </LazyMotion>
   );
 }
+
+export const MotionReveal = memo(MotionRevealComponent);

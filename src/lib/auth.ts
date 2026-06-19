@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { upsertProfileFromUser } from "@/lib/billing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getAuthenticatedUser() {
+export const getAuthenticatedUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -14,9 +15,9 @@ export async function getAuthenticatedUser() {
   }
 
   return user;
-}
+});
 
-export async function requireAuthenticatedUser() {
+export const requireAuthenticatedUser = cache(async () => {
   try {
     const user = await getAuthenticatedUser();
 
@@ -34,4 +35,4 @@ export async function requireAuthenticatedUser() {
   } catch {
     redirect("/connexion");
   }
-}
+});

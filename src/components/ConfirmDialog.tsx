@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { AlertTriangle } from "lucide-react";
 
 type ConfirmDialogProps = {
@@ -15,7 +15,7 @@ type ConfirmDialogProps = {
   onCancel: () => void;
 };
 
-export function ConfirmDialog({
+function ConfirmDialogComponent({
   open,
   title,
   description,
@@ -62,3 +62,5 @@ export function ConfirmDialog({
     </div>
   );
 }
+
+export const ConfirmDialog = memo(ConfirmDialogComponent);

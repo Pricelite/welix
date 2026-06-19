@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -127,6 +127,7 @@ export function QuotesWorkspace({
   const [busyQuoteId, setBusyQuoteId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [listPulse, setListPulse] = useState(false);
+  const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
     setQuotes(initialQuotes);
@@ -144,67 +145,74 @@ export function QuotesWorkspace({
     return () => window.clearTimeout(timer);
   }, [toasts]);
 
-  const activeClients = clients.filter((client) => !client.archivedAt);
-  const filteredQuotes = quotes
-    .filter((quote) => {
-      if (statusFilter !== "all" && quote.status !== statusFilter) {
-        return false;
-      }
+  const activeClients = useMemo(() => clients.filter((client) => !client.archivedAt), [clients]);
+  const filteredQuotes = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
 
-      if (!query.trim()) {
-        return true;
-      }
+    return quotes
+      .filter((quote) => {
+        if (statusFilter !== "all" && quote.status !== statusFilter) {
+          return false;
+        }
 
-      const haystack = [
-        quote.quoteNumber,
-        quote.clientName,
-        quote.trade,
-        quote.description,
-        quote.status,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+        if (!normalizedQuery) {
+          return true;
+        }
 
-      return haystack.includes(query.trim().toLowerCase());
-    })
-    .sort((left, right) => {
-      if (sortBy === "amount") {
-        return right.total - left.total;
-      }
+        const haystack = [
+          quote.quoteNumber,
+          quote.clientName,
+          quote.trade,
+          quote.description,
+          quote.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      if (sortBy === "client") {
-        return left.clientName.localeCompare(right.clientName, "fr");
-      }
+        return haystack.includes(normalizedQuery);
+      })
+      .sort((left, right) => {
+        if (sortBy === "amount") {
+          return right.total - left.total;
+        }
 
-      return (right.createdAt || "").localeCompare(left.createdAt || "");
-    });
+        if (sortBy === "client") {
+          return left.clientName.localeCompare(right.clientName, "fr");
+        }
 
-  const totalPages = Math.max(1, Math.ceil(filteredQuotes.length / pageSize));
+        return (right.createdAt || "").localeCompare(left.createdAt || "");
+      });
+  }, [deferredQuery, quotes, sortBy, statusFilter]);
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredQuotes.length / pageSize)), [filteredQuotes]);
   const safePage = Math.min(page, totalPages);
-  const visibleQuotes = filteredQuotes.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visibleQuotes = useMemo(
+    () => filteredQuotes.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filteredQuotes, safePage],
+  );
 
-  function showToast(title: string, message: string, tone: ToastItem["tone"]) {
+  const showToast = useCallback((title: string, message: string, tone: ToastItem["tone"]) => {
     setToasts((current) => [...current, buildToast(title, message, tone)]);
-  }
+  }, []);
 
-  function openCreateModal() {
+  const openCreateModal = useCallback(() => {
     setEditingQuoteId("new");
     setDraft(createEmptyQuoteDraft(clients));
-  }
+  }, [clients]);
 
-  function openEditModal(quote: QuoteRecord) {
+  const openEditModal = useCallback((quote: QuoteRecord) => {
     setEditingQuoteId(quote.id);
     setDraft(toDraft(quote));
-  }
+  }, []);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     if (saving) {
       return;
     }
 
     setEditingQuoteId(null);
-  }
+  }, [saving]);
 
   async function submitQuote() {
     if (!draft.clientId || !draft.description.trim()) {
@@ -381,7 +389,7 @@ export function QuotesWorkspace({
     }
   }
 
-  const preview = buildQuotePayload(draft);
+  const preview = useMemo(() => buildQuotePayload(draft), [draft]);
 
   return (
     <>
@@ -393,8 +401,11 @@ export function QuotesWorkspace({
               <span className="sr-only">Rechercher un devis</span>
               <input
                 onChange={(event) => {
-                  setPage(1);
-                  setQuery(event.target.value);
+                  const value = event.target.value;
+                  startTransition(() => {
+                    setPage(1);
+                    setQuery(value);
+                  });
                 }}
                 placeholder="Rechercher un devis"
                 value={query}
@@ -404,8 +415,11 @@ export function QuotesWorkspace({
             <select
               className="crm-select"
               onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value);
+                const nextFilter = event.target.value;
+                startTransition(() => {
+                  setPage(1);
+                  setStatusFilter(nextFilter);
+                });
               }}
               value={statusFilter}
             >
@@ -419,7 +433,10 @@ export function QuotesWorkspace({
 
             <select
               className="crm-select"
-              onChange={(event) => setSortBy(event.target.value as "recent" | "amount" | "client")}
+              onChange={(event) => {
+                const nextSort = event.target.value as "recent" | "amount" | "client";
+                startTransition(() => setSortBy(nextSort));
+              }}
               value={sortBy}
             >
               <option value="recent">Tri : plus récents</option>

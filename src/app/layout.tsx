@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -21,9 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className={manrope.variable}>
-        <Providers>{children}</Providers>
-      </body>
+      <body className={manrope.variable}>{children}</body>
     </html>
   );
 }
