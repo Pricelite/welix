@@ -68,6 +68,7 @@ describe("AuthScreen", () => {
       await screen.findByText(/compte créé\. vérifie ton email pour confirmer l'inscription\./i),
     ).toBeInTheDocument();
   });
+
   it("toggles the password visibility", () => {
     render(<AuthScreen mode="connexion" />);
 

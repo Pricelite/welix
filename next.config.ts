@@ -2,10 +2,22 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const isProduction = process.env.NODE_ENV === "production";
+const scriptSourcePolicy = [
+  "'self'",
+  "'unsafe-inline'",
+  !isProduction ? "'unsafe-eval'" : "",
+  "https://js.stripe.com",
+  "https://www.googletagmanager.com",
+  "https://plausible.io",
+  "https://cloud.umami.is",
+  "https://va.vercel-scripts.com",
+]
+  .filter(Boolean)
+  .join(" ");
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' https://js.stripe.com https://www.googletagmanager.com https://plausible.io https://cloud.umami.is https://va.vercel-scripts.com",
+  `script-src ${scriptSourcePolicy}`,
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
@@ -23,6 +35,11 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.104"],
+  experimental: {
+    devtoolSegmentExplorer: false,
+    clientTraceMetadata: [],
+  },
   async headers() {
     const sharedSecurityHeaders = [
       {

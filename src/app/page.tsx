@@ -13,6 +13,7 @@ import {
   UsersRound,
   WandSparkles,
 } from "lucide-react";
+import { LandingHeader } from "@/components/LandingHeader";
 
 const clientLogos = [
   "Bernard Rénovation",
@@ -93,36 +94,16 @@ const faqs = [
 export default function Home() {
   return (
     <main className="site-page landing-page">
-      <header className="site-header">
-        <Link className="brand" href="/">
-          <span className="brand-mark">W</span>
-          <span>Welix</span>
-        </Link>
-        <nav className="top-nav" aria-label="Navigation marketing">
-          <a href="#demo">Démo</a>
-          <a href="#fonctionnalites">Fonctionnalités</a>
-          <a href="#avis">Avis</a>
-          <a href="#faq">FAQ</a>
-        </nav>
-        <div className="top-actions">
-          <Link className="ghost-button" href="/connexion">
-            Connexion
-          </Link>
-          <Link className="primary-button" href="/inscription">
-            Essayer gratuitement
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-      </header>
+      <LandingHeader />
 
       <section className="hero-section landing-hero">
         <Image
-          className="hero-image"
-          src="/images/welix-hero.png"
           alt="Bureau moderne d'artisan avec outils et interface de devis"
+          className="hero-image"
           fill
           priority
           sizes="100vw"
+          src="/images/welix-hero.png"
         />
         <div className="hero-overlay landing-overlay" />
         <div className="hero-content landing-hero-content">
@@ -143,7 +124,7 @@ export default function Home() {
                 Voir une démo
               </Link>
             </div>
-            <div className="hero-metrics" aria-label="Bénéfices Welix">
+            <div aria-label="Bénéfices Welix" className="hero-metrics">
               <span>
                 <Clock3 size={16} />2 min par devis
               </span>
@@ -158,7 +139,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="hero-product hero-app-card" aria-label="Capture de Welix">
+          <div aria-label="Capture de Welix" className="hero-product hero-app-card">
             <div className="browser-bar">
               <span />
               <span />
@@ -193,7 +174,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="client-logo-strip" aria-label="Clients Welix">
+      <section aria-label="Clients Welix" className="client-logo-strip">
         {clientLogos.map((logo) => (
           <span key={logo}>{logo}</span>
         ))}
@@ -209,7 +190,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="product-capture" aria-label="Capture produit Welix">
+        <div aria-label="Capture produit Welix" className="product-capture">
           <div className="capture-sidebar">
             <Link className="brand" href="/">
               <span className="brand-mark">W</span>
@@ -286,9 +267,9 @@ export default function Home() {
         <div className="testimonial-grid">
           {testimonials.map((testimonial) => (
             <article className="testimonial-card" key={testimonial.name}>
-              <div className="stars" aria-label="5 étoiles">
+              <div aria-label="5 étoiles" className="stars">
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <Star key={index} size={16} fill="currentColor" />
+                  <Star key={index} fill="currentColor" size={16} />
                 ))}
               </div>
               <p>&ldquo;{testimonial.quote}&rdquo;</p>
