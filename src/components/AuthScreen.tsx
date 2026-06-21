@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 import React, { FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -22,6 +22,7 @@ export function AuthScreen({ mode, errorCode }: AuthScreenProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const callbackMessage = errorCode ? callbackMessages[errorCode] || "" : "";
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
@@ -113,7 +114,23 @@ export function AuthScreen({ mode, errorCode }: AuthScreenProps) {
           </label>
           <label>
             Mot de passe
-            <input name="password" type="password" placeholder="Mot de passe" required />
+            <div className="password-field">
+              <input
+                className="password-field-input"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Mot de passe"
+                required
+              />
+              <button
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                className="password-field-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+                type="button"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
           {isSignup ? (
             <label>
