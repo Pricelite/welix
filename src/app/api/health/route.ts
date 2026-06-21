@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getServerEnv, isProductionEnvironment } from "@/lib/env";
 import { getSiteUrl } from "@/lib/site";
@@ -8,6 +9,12 @@ function isConfigured(value?: string | null) {
 
 export async function GET() {
   const env = getServerEnv();
+  const isProduction = isProductionEnvironment();
+  const requestHeaders = await headers();
+  const authorization = requestHeaders.get("authorization");
+  const bearerToken = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
+  const canReadDetailedChecks =
+    !isProduction || !env.HEALTHCHECK_TOKEN || bearerToken === env.HEALTHCHECK_TOKEN;
 
   const checks = {
     appUrl: getSiteUrl(),
@@ -54,7 +61,10 @@ export async function GET() {
     {
       ok: true,
       timestamp: new Date().toISOString(),
-      checks,
+      environment: process.env.NODE_ENV || "development",
+      productionMode: isProduction,
+      appUrl: getSiteUrl(),
+      checks: canReadDetailedChecks ? checks : undefined,
     },
     {
       headers: {

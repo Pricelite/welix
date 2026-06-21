@@ -56,6 +56,7 @@
 ## 7. Monitoring and Logs
 
 - Open `/api/health` after deploy and verify every required section is configured.
+- If `HEALTHCHECK_TOKEN` is set, call `/api/health` with `Authorization: Bearer <token>` to view detailed checks.
 - Verify Sentry receives server and client errors.
 - Verify analytics loads only when the selected provider variables are present.
 - Confirm web vitals reach `/api/monitoring/web-vitals` and are visible in platform logs.

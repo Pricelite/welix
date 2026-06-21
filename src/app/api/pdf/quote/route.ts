@@ -25,6 +25,11 @@ function drawLabelValue(doc: jsPDF, label: string, value: string, x: number, y: 
   doc.text(value, x, y + 6, { maxWidth });
 }
 
+function toPdfText(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser().catch(() => null);
@@ -132,7 +137,7 @@ export async function GET(request: Request) {
     doc.text(quote.description, 20, 111, { maxWidth: 168 });
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 142, 178, 56, 4, 4, "F");
+    doc.roundedRect(16, 142, 178, 76, 4, 4, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.text("Poste", 20, 151);
@@ -140,10 +145,12 @@ export async function GET(request: Request) {
     doc.text("Montant", 184, 151, { align: "right" });
 
     const rowsToRender = [
-      ["Matériaux", quote.material || "Selon besoins du chantier", formatCurrency(subtotal * 0.45)],
-      ["Main d'œuvre", quote.labor || "Préparation, exécution et finitions", formatCurrency(subtotal * 0.55)],
-      ["Durée estimée", quote.estimated_time || "À confirmer", ""],
+      ["Matériaux", toPdfText(quote.material, "Selon besoins du chantier"), ""],
+      ["Main d'œuvre", toPdfText(quote.labor, "Préparation, exécution et finitions"), ""],
+      ["Durée estimée", toPdfText(quote.estimated_time, "À confirmer"), ""],
+      ["Sous-total HT", "Montant calculé du devis", formatCurrency(subtotal)],
       ["TVA", `${quote.vat_rate ?? 10}%`, formatCurrency(vat)],
+      ["Total TTC", "Montant final à régler", formatCurrency(total)],
     ];
 
     let y = 160;
@@ -171,7 +178,7 @@ export async function GET(request: Request) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text(
-      "Devis généré par Welix. Validité, conditions de règlement et modalités d'exécution à compléter selon votre activité.",
+      "Devis généré par Welix. Pensez à compléter la validité, les conditions de règlement et les mentions légales propres à votre activité.",
       16,
       262,
       { maxWidth: 178 },
