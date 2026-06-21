@@ -3,7 +3,7 @@ import { fetchClientRecord } from "@/lib/crm-server";
 import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
 import { updateClientSchema } from "@/lib/schemas";
 import { sanitizeNullableText, sanitizePlainText } from "@/lib/sanitize";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{
@@ -43,7 +43,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       updates.archived_at = body.archived ? new Date().toISOString() : null;
     }
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { error } = await supabase.from("clients").update(updates).eq("user_id", user.id).eq("id", id);
 
     if (error) {
@@ -71,7 +71,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
 
     const [{ count: quotesCount, error: quotesError }, { count: invoicesCount, error: invoicesError }] =
       await Promise.all([

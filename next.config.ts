@@ -5,7 +5,8 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://plausible.io https://cloud.umami.is https://va.vercel-scripts.com",
+  "script-src 'self' https://js.stripe.com https://www.googletagmanager.com https://plausible.io https://cloud.umami.is https://va.vercel-scripts.com",
+  "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -74,14 +75,6 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "no-store, no-cache, must-revalidate",
-          },
-          {
-            key: "Access-Control-Allow-Origin",
-            value: "*",
-          },
-          {
-            key: "Access-Control-Allow-Methods",
-            value: "GET,HEAD,OPTIONS",
           },
         ],
       },

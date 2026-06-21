@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const clientSelect =
   "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)";
@@ -6,7 +6,7 @@ export const clientSelect =
 export const quoteSelect =
   "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)";
 
-type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
+type SupabaseLike = SupabaseClient;
 
 function pickSingle<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
@@ -111,8 +111,8 @@ export function normalizeQuoteRecord(
   };
 }
 
-export async function fetchClientRecord(admin: SupabaseAdmin, userId: string, clientId: string) {
-  const { data, error } = await admin
+export async function fetchClientRecord(supabase: SupabaseLike, userId: string, clientId: string) {
+  const { data, error } = await supabase
     .from("clients")
     .select(clientSelect)
     .eq("user_id", userId)
@@ -126,8 +126,8 @@ export async function fetchClientRecord(admin: SupabaseAdmin, userId: string, cl
   return normalizeClientRecord(data as never);
 }
 
-export async function fetchQuoteRecord(admin: SupabaseAdmin, userId: string, quoteId: string) {
-  const { data, error } = await admin
+export async function fetchQuoteRecord(supabase: SupabaseLike, userId: string, quoteId: string) {
+  const { data, error } = await supabase
     .from("quotes")
     .select(quoteSelect)
     .eq("user_id", userId)
@@ -141,15 +141,15 @@ export async function fetchQuoteRecord(admin: SupabaseAdmin, userId: string, quo
   return normalizeQuoteRecord(data as never);
 }
 
-export async function syncClientSnapshot(admin: SupabaseAdmin, userId: string, clientId: string) {
+export async function syncClientSnapshot(supabase: SupabaseLike, userId: string, clientId: string) {
   const [{ data: totals, error: totalsError }, { data: latestQuote, error: latestError }] =
     await Promise.all([
-      admin
+      supabase
         .from("quotes")
         .select("total")
         .eq("user_id", userId)
         .eq("client_id", clientId),
-      admin
+      supabase
         .from("quotes")
         .select("id")
         .eq("user_id", userId)
@@ -172,7 +172,7 @@ export async function syncClientSnapshot(admin: SupabaseAdmin, userId: string, c
     0,
   );
 
-  const { error: updateError } = await admin
+  const { error: updateError } = await supabase
     .from("clients")
     .update({
       revenue: Number(revenue.toFixed(2)),

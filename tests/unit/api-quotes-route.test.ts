@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getAuthenticatedUser = vi.fn();
 const fetchQuoteRecord = vi.fn();
 const syncClientSnapshot = vi.fn();
-const createSupabaseAdminClient = vi.fn();
+const createSupabaseServerClient = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   getAuthenticatedUser,
@@ -18,8 +18,8 @@ vi.mock("@/lib/crm-server", async () => {
   };
 });
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createSupabaseAdminClient,
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient,
 }));
 
 type QueryResult = Record<string, unknown>;
@@ -69,7 +69,7 @@ describe("quotes api routes", () => {
         throw new Error(`Unexpected table ${table}`);
       }),
     };
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const { POST } = await import("@/app/api/quotes/route");
     const response = await POST(
@@ -133,7 +133,7 @@ describe("quotes api routes", () => {
         throw new Error(`Unexpected table ${table}`);
       }),
     };
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const { DELETE } = await import("@/app/api/quotes/[id]/route");
     const response = await DELETE(new Request("http://localhost/api/quotes/quote-1"), {

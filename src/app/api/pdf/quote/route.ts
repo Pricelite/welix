@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { ApiError, jsonError } from "@/lib/http";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("fr-FR", {
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const quoteId = url.searchParams.get("id");
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
 
     let query = supabase
       .from("quotes")

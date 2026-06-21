@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getAuthenticatedUser = vi.fn();
 const fetchClientRecord = vi.fn();
-const createSupabaseAdminClient = vi.fn();
+const createSupabaseServerClient = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   getAuthenticatedUser,
@@ -16,8 +16,8 @@ vi.mock("@/lib/crm-server", async () => {
   };
 });
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createSupabaseAdminClient,
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient,
 }));
 
 type QueryResult = Record<string, unknown>;
@@ -59,7 +59,7 @@ describe("clients api routes", () => {
         throw new Error(`Unexpected table ${table}`);
       }),
     };
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const { POST } = await import("@/app/api/clients/route");
     const response = await POST(
@@ -113,7 +113,7 @@ describe("clients api routes", () => {
         throw new Error(`Unexpected table ${table}`);
       }),
     };
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const { DELETE } = await import("@/app/api/clients/[id]/route");
     const response = await DELETE(new Request("http://localhost/api/clients/client-1"), {

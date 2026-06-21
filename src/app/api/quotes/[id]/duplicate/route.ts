@@ -1,7 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { fetchQuoteRecord, syncClientSnapshot } from "@/lib/crm-server";
 import { ApiError, jsonError, jsonSuccess } from "@/lib/http";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{
@@ -25,7 +25,7 @@ export async function POST(_request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const current = await fetchQuoteRecord(supabase, user.id, id);
 
     if (!current || !current.clientId) {

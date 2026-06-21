@@ -3,7 +3,7 @@ import { fetchQuoteRecord, quoteSelect, syncClientSnapshot } from "@/lib/crm-ser
 import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
 import { quotePayloadSchema } from "@/lib/schemas";
 import { sanitizeNullableText, sanitizePlainText } from "@/lib/sanitize";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function createQuoteNumber() {
   const now = new Date();
@@ -24,7 +24,7 @@ export async function GET() {
       throw new ApiError("Authentification requise", 401);
     }
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("quotes")
       .select(quoteSelect)
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const body = await parseJson(request, quotePayloadSchema);
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id")

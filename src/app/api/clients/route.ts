@@ -3,7 +3,7 @@ import { fetchClientRecord, clientSelect } from "@/lib/crm-server";
 import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
 import { createClientSchema } from "@/lib/schemas";
 import { sanitizeNullableText, sanitizePlainText } from "@/lib/sanitize";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
@@ -13,7 +13,7 @@ export async function GET() {
       throw new ApiError("Authentification requise", 401);
     }
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("clients")
       .select(clientSelect)
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     const body = await parseJson(request, createClientSchema);
-    const supabase = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("clients")
       .insert({
