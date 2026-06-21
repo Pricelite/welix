@@ -68,4 +68,16 @@ describe("AuthScreen", () => {
       await screen.findByText(/compte créé\. vérifie ton email pour confirmer l'inscription\./i),
     ).toBeInTheDocument();
   });
+  it("toggles the password visibility", () => {
+    render(<AuthScreen mode="connexion" />);
+
+    const passwordInput = screen.getByLabelText(/^mot de passe$/i);
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: /afficher le mot de passe/i }));
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    fireEvent.click(screen.getByRole("button", { name: /masquer le mot de passe/i }));
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
 });

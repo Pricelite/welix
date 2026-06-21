@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, MouseEvent, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthScreenProps = {
@@ -19,11 +20,30 @@ const callbackMessages: Record<string, string> = {
 
 export function AuthScreen({ mode, errorCode }: AuthScreenProps) {
   const isSignup = mode === "inscription";
+  const passwordFieldId = isSignup ? "signup-password" : "login-password";
   const router = useRouter();
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const callbackMessage = errorCode ? callbackMessages[errorCode] || "" : "";
+
+  function togglePasswordVisibility(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const input = passwordInputRef.current;
+
+    if (!input) {
+      setShowPassword((current) => !current);
+      return;
+    }
+
+    const nextVisible = input.type === "password";
+    input.type = nextVisible ? "text" : "password";
+    setShowPassword(nextVisible);
+    input.focus({ preventScroll: true });
+  }
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,108 +89,118 @@ export function AuthScreen({ mode, errorCode }: AuthScreenProps) {
   }
 
   return (
-    <main className="auth-page">
-      <Link className="brand auth-brand" href="/">
+    <main className="auth-page auth-page-immersive">
+      <Link className="brand auth-brand auth-brand-overlay" href="/">
         <span className="brand-mark">W</span>
         <span>Welix</span>
       </Link>
 
-      <section className="auth-layout">
-        <div className="auth-copy">
-          <p className="section-kicker">Assistant devis IA</p>
-          <h1>{isSignup ? "Créez votre espace artisan." : "Retour à l'atelier."}</h1>
-          <p>
-            Gérez les clients, préparez les devis, suivez les relances et gardez une image
-            professionnelle sans perdre vos soirées sur l&apos;administratif.
-          </p>
-          <div className="auth-proof">
+      <section className="auth-layout auth-layout-immersive">
+        <div className="auth-hero-frame">
+          <Image
+            alt="Présentation Welix avec tableau de bord clients, devis et relances"
+            className="auth-hero-image"
+            fill
+            priority
+            sizes="100vw"
+            src="/images/auth-hero-premium.png"
+          />
+          <div className="auth-hero-overlay" />
+
+          <div className="auth-proof auth-proof-floating">
             <CheckCircle2 size={18} />
-            <span>Configuration initiale en moins de 4 minutes</span>
+            <span>Moins d&apos;administratif, plus de temps pour le chantier</span>
           </div>
-        </div>
 
-        <form className="auth-panel" onSubmit={submitAuth}>
-          <div className="auth-panel-head">
-            <Sparkles size={20} />
-            <div>
-              <h2>{isSignup ? "Inscription" : "Connexion"}</h2>
-              <p>
-                {isSignup
-                  ? "Essayez Welix avec vos propres prestations."
-                  : "Accédez à votre tableau de bord Welix."}
+          <form className="auth-panel auth-panel-floating" onSubmit={submitAuth}>
+            <div className="auth-panel-head">
+              <Sparkles size={20} />
+              <div>
+                <h2>{isSignup ? "Inscription" : "Connexion"}</h2>
+                <p>
+                  {isSignup
+                    ? "Essayez Welix avec vos propres prestations."
+                    : "Accédez à votre tableau de bord Welix."}
+                </p>
+              </div>
+            </div>
+
+            {isSignup ? (
+              <label>
+                Nom de l&apos;entreprise
+                <input name="company" placeholder="Bernard Rénovation" />
+              </label>
+            ) : null}
+
+            <label>
+              Email professionnel
+              <input name="email" type="email" placeholder="vous@entreprise.fr" required />
+            </label>
+
+            <label htmlFor={passwordFieldId}>
+              Mot de passe
+              <div className="password-field">
+                <input
+                  className="password-field-input"
+                  id={passwordFieldId}
+                  ref={passwordInputRef}
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe"
+                  required
+                />
+                <button
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  className="password-field-toggle"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={togglePasswordVisibility}
+                  type="button"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </label>
+
+            {isSignup ? (
+              <label>
+                Métier principal
+                <select name="trade" defaultValue="">
+                  <option value="" disabled>
+                    Sélectionner
+                  </option>
+                  <option>Plomberie</option>
+                  <option>Électricité</option>
+                  <option>Peinture</option>
+                  <option>Maçonnerie</option>
+                  <option>Menuiserie</option>
+                  <option>Couverture</option>
+                </select>
+              </label>
+            ) : null}
+
+            {callbackMessage ? <p className="auth-error">{callbackMessage}</p> : null}
+            {message ? <p className="auth-error">{message}</p> : null}
+
+            <button className="primary-button auth-submit" type="submit" disabled={loading}>
+              {loading ? <Loader2 className="spin-icon" size={17} /> : null}
+              {isSignup ? "Créer mon compte" : "Se connecter"}
+              <ArrowRight size={17} />
+            </button>
+
+            {!isSignup ? (
+              <p className="auth-switch">
+                <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
               </p>
-            </div>
-          </div>
+            ) : null}
 
-          {isSignup ? (
-            <label>
-              Nom de l&apos;entreprise
-              <input name="company" placeholder="Bernard Rénovation" />
-            </label>
-          ) : null}
-          <label>
-            Email professionnel
-            <input name="email" type="email" placeholder="vous@entreprise.fr" required />
-          </label>
-          <label>
-            Mot de passe
-            <div className="password-field">
-              <input
-                className="password-field-input"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Mot de passe"
-                required
-              />
-              <button
-                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                className="password-field-toggle"
-                onClick={() => setShowPassword((current) => !current)}
-                type="button"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </label>
-          {isSignup ? (
-            <label>
-              Métier principal
-              <select name="trade" defaultValue="">
-                <option value="" disabled>
-                  Sélectionner
-                </option>
-                <option>Plomberie</option>
-                <option>Électricité</option>
-                <option>Peinture</option>
-                <option>Maçonnerie</option>
-                <option>Menuiserie</option>
-                <option>Couverture</option>
-              </select>
-            </label>
-          ) : null}
-
-          {callbackMessage ? <p className="auth-error">{callbackMessage}</p> : null}
-          {message ? <p className="auth-error">{message}</p> : null}
-
-          <button className="primary-button auth-submit" type="submit" disabled={loading}>
-            {loading ? <Loader2 className="spin-icon" size={17} /> : null}
-            {isSignup ? "Créer mon compte" : "Se connecter"}
-            <ArrowRight size={17} />
-          </button>
-
-          {!isSignup ? (
             <p className="auth-switch">
-              <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+              {isSignup ? "Déjà un compte ?" : "Pas encore inscrit ?"}{" "}
+              <Link href={isSignup ? "/connexion" : "/inscription"}>
+                {isSignup ? "Créer un compte" : "Se connecter"}
+              </Link>
             </p>
-          ) : null}
-
-          <p className="auth-switch">
-            {isSignup ? "Déjà un compte ?" : "Pas encore inscrit ?"}{" "}
-            <Link href={isSignup ? "/connexion" : "/inscription"}>
-              {isSignup ? "Se connecter" : "Créer un compte"}
-            </Link>
-          </p>
-        </form>
+          </form>
+        </div>
       </section>
     </main>
   );
