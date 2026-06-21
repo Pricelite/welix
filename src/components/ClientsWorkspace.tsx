@@ -131,6 +131,9 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
     () => filteredClients.slice((safePage - 1) * pageSize, safePage * pageSize),
     [filteredClients, safePage],
   );
+  const activeCount = useMemo(() => clients.filter((client) => !client.archivedAt).length, [clients]);
+  const archivedCount = Math.max(clients.length - activeCount, 0);
+  const revenueTotal = useMemo(() => clients.reduce((sum, client) => sum + client.revenue, 0), [clients]);
 
   const showToast = useCallback((title: string, message: string, tone: ToastItem["tone"]) => {
     setToasts((current) => [...current, buildToast(title, message, tone)]);
@@ -201,7 +204,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
 
       if (!response.ok || !data.client) {
         setClients(snapshot);
-        showToast("Action annulée", data.error || "Impossible d'enregistrer le client.", "error");
+        showToast("Action annul\u00e9e", data.error || "Impossible d'enregistrer le client.", "error");
         return;
       }
 
@@ -214,15 +217,15 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
       setEditingClientId(null);
       setDraft(emptyDraft);
       showToast(
-        creating ? "Client créé" : "Client mis à jour",
+        creating ? "Client cr\u00e9\u00e9" : "Client mis \u00e0 jour",
         creating
-          ? "La fiche client a bien été ajoutée."
-          : "Les informations du client ont été enregistrées.",
+          ? "La fiche client a bien \u00e9t\u00e9 ajout\u00e9e."
+          : "Les informations du client ont \u00e9t\u00e9 enregistr\u00e9es.",
         "success",
       );
     } catch {
       setClients(snapshot);
-      showToast("Erreur réseau", "La modification n'a pas pu être enregistrée.", "error");
+      showToast("Erreur r\u00e9seau", "La modification n'a pas pu \u00eatre enregistr\u00e9e.", "error");
     } finally {
       setSaving(false);
       window.setTimeout(() => setListPulse(false), 500);
@@ -254,24 +257,22 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
 
       if (!response.ok || !data.client) {
         setClients(snapshot);
-        showToast("Action refusée", data.error || "Impossible de mettre à jour le client.", "error");
+        showToast("Action refus\u00e9e", data.error || "Impossible de mettre \u00e0 jour le client.", "error");
         return;
       }
 
       const nextClient = data.client;
-      setClients((current) =>
-        current.map((item) => (item.id === nextClient.id ? nextClient : item)),
-      );
+      setClients((current) => current.map((item) => (item.id === nextClient.id ? nextClient : item)));
       showToast(
-        archived ? "Client archivé" : "Client restauré",
+        archived ? "Client archiv\u00e9" : "Client restaur\u00e9",
         archived
-          ? "Le client a été retiré des listes actives."
+          ? "Le client a \u00e9t\u00e9 retir\u00e9 des listes actives."
           : "Le client est de nouveau visible dans les listes actives.",
         "success",
       );
     } catch {
       setClients(snapshot);
-      showToast("Erreur réseau", "Impossible de mettre à jour l'état du client.", "error");
+      showToast("Erreur r\u00e9seau", "Impossible de mettre \u00e0 jour l'\u00e9tat du client.", "error");
     } finally {
       setBusyClientId(null);
       window.setTimeout(() => setListPulse(false), 500);
@@ -297,17 +298,17 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
         setClients(snapshot);
         showToast(
           "Suppression impossible",
-          data.error || "Le client n'a pas pu être supprimé.",
+          data.error || "Le client n'a pas pu \u00eatre supprim\u00e9.",
           "error",
         );
         return;
       }
 
-      showToast("Client supprimé", "La fiche client a été supprimée définitivement.", "success");
+      showToast("Client supprim\u00e9", "La fiche client a \u00e9t\u00e9 supprim\u00e9e d\u00e9finitivement.", "success");
       setDeletingClientId(null);
     } catch {
       setClients(snapshot);
-      showToast("Erreur réseau", "La suppression n'a pas pu être finalisée.", "error");
+      showToast("Erreur r\u00e9seau", "La suppression n'a pas pu \u00eatre finalis\u00e9e.", "error");
     } finally {
       setBusyClientId(null);
     }
@@ -346,7 +347,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               value={visibility}
             >
               <option value="active">Clients actifs</option>
-              <option value="archived">{"Clients archivés"}</option>
+              <option value="archived">{"Clients archiv\u00e9s"}</option>
               <option value="all">Tous les clients</option>
             </select>
 
@@ -358,7 +359,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               }}
               value={sortBy}
             >
-              <option value="recent">{"Tri : plus récents"}</option>
+              <option value="recent">{"Tri : plus r\u00e9cents"}</option>
               <option value="name">Tri : nom</option>
               <option value="revenue">{"Tri : chiffre d'affaires"}</option>
             </select>
@@ -371,14 +372,32 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
         </div>
       </section>
 
+      <section className="crm-stat-strip" aria-label="Synthese clients">
+        <article className="crm-stat-card">
+          <span>Clients actifs</span>
+          <strong>{activeCount}</strong>
+          <small>Espace visible au quotidien</small>
+        </article>
+        <article className="crm-stat-card">
+          <span>Archives</span>
+          <strong>{archivedCount}</strong>
+          <small>Historique conserve</small>
+        </article>
+        <article className="crm-stat-card">
+          <span>CA signe</span>
+          <strong>{formatCurrency(revenueTotal)}</strong>
+          <small>Projection relation client</small>
+        </article>
+      </section>
+
       <section className={`workspace-panel crm-list-panel ${listPulse ? "is-pulsing" : ""}`}>
         <div className="panel-title">
           <div>
             <h2>Fiches clients</h2>
             <p>
               {filteredClients.length
-                ? `${filteredClients.length} résultat(s) dans la vue actuelle`
-                : "Aucun client ne correspond à cette recherche"}
+                ? `${filteredClients.length} r\u00e9sultat(s) dans la vue actuelle`
+                : "Aucun client ne correspond \u00e0 cette recherche"}
             </p>
           </div>
         </div>
@@ -405,23 +424,21 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
                   <div>
                     <div className="crm-card-title">
                       <h3>{client.name}</h3>
-                      {client.archivedAt ? (
-                        <span className="status status-brouillon">Archivé</span>
-                      ) : null}
+                      {client.archivedAt ? <span className="status status-brouillon">Archiv\u00e9</span> : null}
                     </div>
-                    <p>{client.contact || "Contact à renseigner"}</p>
+                    <p>{client.contact || "Contact \u00e0 renseigner"}</p>
                   </div>
                   <dl>
                     <div>
                       <dt>E-mail</dt>
-                      <dd>{client.email || "À renseigner"}</dd>
+                      <dd>{client.email || "\u00c0 renseigner"}</dd>
                     </div>
                     <div>
                       <dt>Ville</dt>
-                      <dd>{client.city || "À renseigner"}</dd>
+                      <dd>{client.city || "\u00c0 renseigner"}</dd>
                     </div>
                     <div>
-                      <dt>CA signé</dt>
+                      <dt>CA sign\u00e9</dt>
                       <dd>{formatCurrency(client.revenue)}</dd>
                     </div>
                     <div>
@@ -473,7 +490,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
                   type="button"
                 >
                   <ChevronLeft size={15} />
-                  Précédent
+                  Pr\u00e9c\u00e9dent
                 </button>
                 <button
                   className="secondary-button small-button"
@@ -488,10 +505,10 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
             </div>
           </>
         ) : (
-          <div className="empty-state-panel">
+          <div className="empty-state-panel premium-empty-state">
             <UsersRound size={22} />
-            <strong>Aucun client à afficher</strong>
-            <p>Ajoute une première fiche ou ajuste tes filtres pour retrouver un client.</p>
+            <strong>Aucun client \u00e0 afficher</strong>
+            <p>Ajoute une premi\u00e8re fiche ou ajuste tes filtres pour retrouver un client.</p>
             <button className="secondary-button small-button" onClick={openCreateModal} type="button">
               <Plus size={15} />
               Ajouter un client
@@ -505,18 +522,16 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
           <div aria-modal="true" className="overlay-card form-overlay-card" role="dialog">
             <div className="panel-title">
               <div>
-                <h2>{editingClientId === "new" ? "Créer un client" : "Modifier le client"}</h2>
-                <p>Renseigne une fiche propre et complète pour faciliter le suivi commercial.</p>
+                <h2>{editingClientId === "new" ? "Cr\u00e9er un client" : "Modifier le client"}</h2>
+                <p>Renseigne une fiche propre et compl\u00e8te pour faciliter le suivi commercial.</p>
               </div>
             </div>
 
-            <div className="simple-form-grid">
+            <div className="simple-form-grid premium-form-grid">
               <label>
                 Nom du client
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, name: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Maison Laurent"
                   value={draft.name}
                 />
@@ -524,9 +539,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               <label>
                 Contact
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, contact: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, contact: event.target.value }))}
                   placeholder="Claire Laurent"
                   value={draft.contact}
                 />
@@ -534,9 +547,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               <label>
                 E-mail
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, email: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
                   placeholder="contact@client.fr"
                   type="email"
                   value={draft.email}
@@ -545,9 +556,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
               <label>
                 Ville
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, city: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, city: event.target.value }))}
                   placeholder="Lyon"
                   value={draft.city}
                 />
@@ -564,7 +573,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
                 onClick={submitClient}
                 type="button"
               >
-                {editingClientId === "new" ? "Créer le client" : "Enregistrer"}
+                {editingClientId === "new" ? "Cr\u00e9er le client" : "Enregistrer"}
               </button>
             </div>
           </div>
@@ -573,8 +582,8 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
 
       <ConfirmDialog
         busy={busyClientId === deletingClientId}
-        confirmLabel="Supprimer définitivement"
-        description="Cette action retire la fiche client de Welix. Si des devis ou factures existent déjà, l'API refusera la suppression."
+        confirmLabel="Supprimer d\u00e9finitivement"
+        description="Cette action retire la fiche client de Welix. Si des devis ou factures existent d\u00e9j\u00e0, l'API refusera la suppression."
         onCancel={() => setDeletingClientId(null)}
         onConfirm={deleteClient}
         open={Boolean(deletingClientId)}

@@ -158,8 +158,18 @@ export function AiQuoteGenerator({ clients }: { clients: ClientOption[] }) {
           <div>
             <p className="section-kicker">Assistant IA</p>
             <h2>{"\u00c9cris le besoin, Welix pr\u00e9pare le devis."}</h2>
+            <p className="ai-supporting-copy">
+              Decris le chantier comme tu le ferais oralement. L&apos;interface met ensuite le resultat en forme.
+            </p>
           </div>
           <Sparkles size={20} />
+        </div>
+
+        <div className="ai-prompt-chips" aria-label="Rep\u00e8res de saisie">
+          <span>Surface</span>
+          <span>Materiaux</span>
+          <span>Urgence</span>
+          <span>Temps estime</span>
         </div>
 
         <label className="ai-prompt-label">
@@ -221,6 +231,9 @@ export function AiQuoteGenerator({ clients }: { clients: ClientOption[] }) {
           <div>
             <p className="section-kicker">{"R\u00e9sultat g\u00e9n\u00e9r\u00e9"}</p>
             <h2>{prompt}</h2>
+            <p className="ai-supporting-copy">
+              Verifie les postes proposes, ajuste si besoin puis enregistre le devis dans l&apos;historique.
+            </p>
           </div>
           <span className={`ai-status ${isGenerating ? "loading" : "ready"}`}>
             {isGenerating ? "Welix travaille" : "Pr\u00eat"}

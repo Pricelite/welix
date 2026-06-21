@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { captureException } from "@/lib/monitoring";
 
 export class ApiError extends Error {
   status: number;
@@ -34,6 +35,7 @@ export function jsonError(error: unknown, fallbackMessage = "Erreur serveur") {
   }
 
   if (error instanceof Error) {
+    captureException(error, { area: "api", fallbackMessage });
     return NextResponse.json({ error: `${fallbackMessage} : ${error.message}` }, { status: 500 });
   }
 

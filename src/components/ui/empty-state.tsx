@@ -14,9 +14,11 @@ export function EmptyState({
   return (
     <div className="ui-empty-state">
       <div className="ui-empty-icon">{icon}</div>
-      <strong>{title}</strong>
-      <p>{description}</p>
-      {action ? <div>{action}</div> : null}
+      <div className="ui-empty-copy">
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      {action ? <div className="ui-empty-action">{action}</div> : null}
     </div>
   );
 }

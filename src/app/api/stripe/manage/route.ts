@@ -1,12 +1,9 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getAccountSnapshot } from "@/lib/billing";
+import { getAppUrl } from "@/lib/env";
 import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
 import { stripeManageSchema } from "@/lib/schemas";
 import { createStripeClient } from "@/lib/stripe";
-
-function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +16,7 @@ export async function POST(request: Request) {
     const body = await parseJson(request, stripeManageSchema);
     const { profile, subscription } = await getAccountSnapshot(user.id);
     const stripe = createStripeClient();
-    const appUrl = getAppUrl();
+    const appUrl = getAppUrl({ requireInProduction: true });
 
     if (body.action === "portal") {
       if (!profile?.stripe_customer_id) {

@@ -28,7 +28,7 @@ type QuoteDraft = {
   status: string;
 };
 
-const quoteStatuses = ["Brouillon", "Envoyé", "Accepté", "Refusé", "Payé"] as const;
+const quoteStatuses = ["Brouillon", "Envoy\u00e9", "Accept\u00e9", "Refus\u00e9", "Pay\u00e9"] as const;
 const pageSize = 7;
 
 function buildToast(title: string, message: string, tone: ToastItem["tone"]): ToastItem {
@@ -42,16 +42,16 @@ function buildToast(title: string, message: string, tone: ToastItem["tone"]): To
 
 function getStatusClass(status: string) {
   switch (status.toLowerCase()) {
-    case "accepté":
+    case "accept\u00e9":
     case "accepte":
       return "status-accepte";
-    case "envoyé":
+    case "envoy\u00e9":
     case "envoye":
       return "status-envoye";
-    case "refusé":
+    case "refus\u00e9":
     case "refuse":
       return "status-relance";
-    case "payé":
+    case "pay\u00e9":
     case "paye":
       return "status-accepte";
     default:
@@ -62,7 +62,7 @@ function getStatusClass(status: string) {
 function createEmptyQuoteDraft(clients: ClientRecord[]): QuoteDraft {
   return {
     clientId: clients.find((client) => !client.archivedAt)?.id || clients[0]?.id || "",
-    trade: "Général",
+    trade: "G\u00e9n\u00e9ral",
     description: "",
     material: "",
     labor: "",
@@ -97,7 +97,7 @@ function buildQuotePayload(draft: QuoteDraft) {
 function toDraft(quote: QuoteRecord): QuoteDraft {
   return {
     clientId: quote.clientId || "",
-    trade: quote.trade || "Général",
+    trade: quote.trade || "G\u00e9n\u00e9ral",
     description: quote.description,
     material: quote.material || "",
     labor: quote.labor || "",
@@ -191,6 +191,14 @@ export function QuotesWorkspace({
     () => filteredQuotes.slice((safePage - 1) * pageSize, safePage * pageSize),
     [filteredQuotes, safePage],
   );
+  const acceptedAmount = useMemo(
+    () =>
+      quotes
+        .filter((quote) => quote.status === "Accept\u00e9" || quote.status === "Pay\u00e9")
+        .reduce((sum, quote) => sum + quote.total, 0),
+    [quotes],
+  );
+  const draftCount = useMemo(() => quotes.filter((quote) => quote.status === "Brouillon").length, [quotes]);
 
   const showToast = useCallback((title: string, message: string, tone: ToastItem["tone"]) => {
     setToasts((current) => [...current, buildToast(title, message, tone)]);
@@ -258,7 +266,7 @@ export function QuotesWorkspace({
       const data = (await response.json()) as { error?: string; quote?: QuoteRecord };
 
       if (!response.ok || !data.quote) {
-        showToast("Action annulée", data.error || "Impossible d'enregistrer le devis.", "error");
+        showToast("Action annul\u00e9e", data.error || "Impossible d'enregistrer le devis.", "error");
         return;
       }
 
@@ -270,15 +278,15 @@ export function QuotesWorkspace({
       );
       setEditingQuoteId(null);
       showToast(
-        editingQuoteId === "new" ? "Devis créé" : "Devis mis à jour",
+        editingQuoteId === "new" ? "Devis cr\u00e9\u00e9" : "Devis mis \u00e0 jour",
         editingQuoteId === "new"
-          ? "Le devis a bien été ajouté."
-          : "Les modifications du devis ont été enregistrées.",
+          ? "Le devis a bien \u00e9t\u00e9 ajout\u00e9."
+          : "Les modifications du devis ont \u00e9t\u00e9 enregistr\u00e9es.",
         "success",
       );
     } catch {
       setQuotes(snapshot);
-      showToast("Erreur réseau", "Le devis n'a pas pu être enregistré.", "error");
+      showToast("Erreur r\u00e9seau", "Le devis n'a pas pu \u00eatre enregistr\u00e9.", "error");
     } finally {
       setSaving(false);
       window.setTimeout(() => setListPulse(false), 500);
@@ -288,9 +296,7 @@ export function QuotesWorkspace({
   async function updateStatus(quote: QuoteRecord, status: string) {
     const snapshot = quotes;
     setBusyQuoteId(quote.id);
-    setQuotes((current) =>
-      current.map((item) => (item.id === quote.id ? { ...item, status } : item)),
-    );
+    setQuotes((current) => current.map((item) => (item.id === quote.id ? { ...item, status } : item)));
 
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
@@ -303,7 +309,7 @@ export function QuotesWorkspace({
       if (!response.ok || !data.quote) {
         setQuotes(snapshot);
         showToast(
-          "Statut inchangé",
+          "Statut inchang\u00e9",
           data.error || "Impossible de changer le statut du devis.",
           "error",
         );
@@ -311,17 +317,11 @@ export function QuotesWorkspace({
       }
 
       const nextQuote = data.quote;
-      setQuotes((current) =>
-        current.map((item) => (item.id === nextQuote.id ? nextQuote : item)),
-      );
-      showToast(
-        "Statut mis à jour",
-        `Le devis est maintenant en statut ${status.toLowerCase()}.`,
-        "success",
-      );
+      setQuotes((current) => current.map((item) => (item.id === nextQuote.id ? nextQuote : item)));
+      showToast("Statut mis \u00e0 jour", `Le devis est maintenant en statut ${status.toLowerCase()}.`, "success");
     } catch {
       setQuotes(snapshot);
-      showToast("Erreur réseau", "Le statut n'a pas pu être mis à jour.", "error");
+      showToast("Erreur r\u00e9seau", "Le statut n'a pas pu \u00eatre mis \u00e0 jour.", "error");
     } finally {
       setBusyQuoteId(null);
     }
@@ -337,18 +337,14 @@ export function QuotesWorkspace({
       const data = (await response.json()) as { error?: string; quote?: QuoteRecord };
 
       if (!response.ok || !data.quote) {
-        showToast(
-          "Duplication refusée",
-          data.error || "Impossible de dupliquer le devis.",
-          "error",
-        );
+        showToast("Duplication refus\u00e9e", data.error || "Impossible de dupliquer le devis.", "error");
         return;
       }
 
       setQuotes((current) => [data.quote as QuoteRecord, ...current]);
-      showToast("Devis dupliqué", "Une copie du devis a été créée en brouillon.", "success");
+      showToast("Devis dupliqu\u00e9", "Une copie du devis a \u00e9t\u00e9 cr\u00e9\u00e9e en brouillon.", "success");
     } catch {
-      showToast("Erreur réseau", "La duplication n'a pas pu être finalisée.", "error");
+      showToast("Erreur r\u00e9seau", "La duplication n'a pas pu \u00eatre finalis\u00e9e.", "error");
     } finally {
       setBusyQuoteId(null);
     }
@@ -373,17 +369,17 @@ export function QuotesWorkspace({
         setQuotes(snapshot);
         showToast(
           "Suppression impossible",
-          data.error || "Le devis n'a pas pu être supprimé.",
+          data.error || "Le devis n'a pas pu \u00eatre supprim\u00e9.",
           "error",
         );
         return;
       }
 
       setDeletingQuoteId(null);
-      showToast("Devis supprimé", "Le devis a été supprimé définitivement.", "success");
+      showToast("Devis supprim\u00e9", "Le devis a \u00e9t\u00e9 supprim\u00e9 d\u00e9finitivement.", "success");
     } catch {
       setQuotes(snapshot);
-      showToast("Erreur réseau", "La suppression n'a pas pu être finalisée.", "error");
+      showToast("Erreur r\u00e9seau", "La suppression n'a pas pu \u00eatre finalis\u00e9e.", "error");
     } finally {
       setBusyQuoteId(null);
     }
@@ -439,7 +435,7 @@ export function QuotesWorkspace({
               }}
               value={sortBy}
             >
-              <option value="recent">Tri : plus récents</option>
+              <option value="recent">Tri : plus r\u00e9cents</option>
               <option value="amount">Tri : montant</option>
               <option value="client">Tri : client</option>
             </select>
@@ -447,9 +443,27 @@ export function QuotesWorkspace({
 
           <button className="primary-button small-button" onClick={openCreateModal} type="button">
             <Plus size={16} />
-            Créer un devis
+            Cr\u00e9er un devis
           </button>
         </div>
+      </section>
+
+      <section className="crm-stat-strip" aria-label="Synthese devis">
+        <article className="crm-stat-card">
+          <span>Devis actifs</span>
+          <strong>{quotes.length}</strong>
+          <small>Base commerciale centralisee</small>
+        </article>
+        <article className="crm-stat-card">
+          <span>Brouillons</span>
+          <strong>{draftCount}</strong>
+          <small>En attente de validation</small>
+        </article>
+        <article className="crm-stat-card">
+          <span>Montant signe</span>
+          <strong>{formatCurrency(acceptedAmount)}</strong>
+          <small>Vision pipeline converti</small>
+        </article>
       </section>
 
       <section className={`workspace-panel crm-list-panel ${listPulse ? "is-pulsing" : ""}`}>
@@ -459,7 +473,7 @@ export function QuotesWorkspace({
             <p>
               {filteredQuotes.length
                 ? `${filteredQuotes.length} devis dans la vue actuelle`
-                : "Aucun devis ne correspond à cette recherche"}
+                : "Aucun devis ne correspond \u00e0 cette recherche"}
             </p>
           </div>
         </div>
@@ -526,7 +540,7 @@ export function QuotesWorkspace({
                     <button
                       aria-label={`Envoyer ${quote.quoteNumber}`}
                       className="icon-button"
-                      onClick={() => updateStatus(quote, "Envoyé")}
+                      onClick={() => updateStatus(quote, "Envoy\u00e9")}
                       type="button"
                     >
                       <Send size={16} />
@@ -548,7 +562,7 @@ export function QuotesWorkspace({
                   type="button"
                 >
                   <ChevronLeft size={15} />
-                  Précédent
+                  Pr\u00e9c\u00e9dent
                 </button>
                 <button
                   className="secondary-button small-button"
@@ -563,13 +577,13 @@ export function QuotesWorkspace({
             </div>
           </>
         ) : (
-          <div className="empty-state-panel">
+          <div className="empty-state-panel premium-empty-state">
             <Send size={22} />
-            <strong>Aucun devis à afficher</strong>
-            <p>Crée un devis, duplique un modèle existant ou ajuste tes filtres pour le retrouver.</p>
+            <strong>Aucun devis \u00e0 afficher</strong>
+            <p>Cr\u00e9e un devis, duplique un mod\u00e8le existant ou ajuste tes filtres pour le retrouver.</p>
             <button className="secondary-button small-button" onClick={openCreateModal} type="button">
               <Plus size={15} />
-              Créer un devis
+              Cr\u00e9er un devis
             </button>
           </div>
         )}
@@ -584,19 +598,17 @@ export function QuotesWorkspace({
           >
             <div className="panel-title">
               <div>
-                <h2>{editingQuoteId === "new" ? "Créer un devis" : "Modifier le devis"}</h2>
-                <p>Prépare un document professionnel, clair pour le client et simple à suivre.</p>
+                <h2>{editingQuoteId === "new" ? "Cr\u00e9er un devis" : "Modifier le devis"}</h2>
+                <p>Pr\u00e9pare un document professionnel, clair pour le client et simple \u00e0 suivre.</p>
               </div>
             </div>
 
-            <div className="simple-form-grid quote-dialog-grid">
+            <div className="simple-form-grid quote-dialog-grid premium-form-grid">
               <label>
                 Client
                 <select
                   className="crm-select"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, clientId: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, clientId: event.target.value }))}
                   value={draft.clientId}
                 >
                   {activeClients.map((client) => (
@@ -607,51 +619,41 @@ export function QuotesWorkspace({
                 </select>
               </label>
               <label>
-                Métier
+                M\u00e9tier
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, trade: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, trade: event.target.value }))}
                   value={draft.trade}
                 />
               </label>
               <label className="quote-dialog-full">
                 Description
                 <textarea
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, description: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                   rows={4}
                   value={draft.description}
                 />
               </label>
               <label className="quote-dialog-full">
-                Matériel
+                Mat\u00e9riel
                 <textarea
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, material: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, material: event.target.value }))}
                   rows={3}
                   value={draft.material}
                 />
               </label>
               <label className="quote-dialog-full">
-                {"Main d'œuvre"}
+                {"Main d'\u0153uvre"}
                 <textarea
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, labor: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, labor: event.target.value }))}
                   rows={3}
                   value={draft.labor}
                 />
               </label>
               <label>
-                Temps estimé
+                Temps estim\u00e9
                 <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, estimatedTime: event.target.value }))
-                  }
-                  placeholder="1 journée"
+                  onChange={(event) => setDraft((current) => ({ ...current, estimatedTime: event.target.value }))}
+                  placeholder="1 journ\u00e9e"
                   value={draft.estimatedTime}
                 />
               </label>
@@ -659,9 +661,7 @@ export function QuotesWorkspace({
                 Statut
                 <select
                   className="crm-select"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, status: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value }))}
                   value={draft.status}
                 >
                   {quoteStatuses.map((status) => (
@@ -685,9 +685,7 @@ export function QuotesWorkspace({
                 TVA (%)
                 <input
                   inputMode="decimal"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, vatRate: event.target.value }))
-                  }
+                  onChange={(event) => setDraft((current) => ({ ...current, vatRate: event.target.value }))}
                   value={draft.vatRate}
                 />
               </label>
@@ -695,7 +693,7 @@ export function QuotesWorkspace({
 
             <div className="quote-preview-strip">
               <div>
-                <span>TVA calculée</span>
+                <span>TVA calcul\u00e9e</span>
                 <strong>{formatCurrency(preview.vatAmount)}</strong>
               </div>
               <div>
@@ -714,7 +712,7 @@ export function QuotesWorkspace({
                 onClick={submitQuote}
                 type="button"
               >
-                {editingQuoteId === "new" ? "Créer le devis" : "Enregistrer"}
+                {editingQuoteId === "new" ? "Cr\u00e9er le devis" : "Enregistrer"}
               </button>
             </div>
           </div>
@@ -723,8 +721,8 @@ export function QuotesWorkspace({
 
       <ConfirmDialog
         busy={busyQuoteId === deletingQuoteId}
-        confirmLabel="Supprimer définitivement"
-        description="Cette action retire le devis de Welix. Si une facture y est liée, l'API refusera la suppression pour protéger l'historique."
+        confirmLabel="Supprimer d\u00e9finitivement"
+        description="Cette action retire le devis de Welix. Si une facture y est li\u00e9e, l'API refusera la suppression pour prot\u00e9ger l'historique."
         onCancel={() => setDeletingQuoteId(null)}
         onConfirm={deleteQuote}
         open={Boolean(deletingQuoteId)}

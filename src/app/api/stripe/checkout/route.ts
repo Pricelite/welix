@@ -1,12 +1,13 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getAccountSnapshot } from "@/lib/billing";
+import { getAppUrl } from "@/lib/env";
 import { ApiError, jsonError, jsonSuccess, parseJson } from "@/lib/http";
 import { stripeCheckoutSchema } from "@/lib/schemas";
 import { createStripeClient } from "@/lib/stripe";
 
 function resolvePriceId(plan: "starter" | "pro") {
   if (plan === "starter") {
-    return process.env.STRIPE_PRICE_ID_STARTER || process.env.STRIPE_PRICE_ID_PRO;
+    return process.env.STRIPE_PRICE_ID_STARTER;
   }
 
   return process.env.STRIPE_PRICE_ID_PRO;
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
     const body = await parseJson(request, stripeCheckoutSchema);
     const priceId = resolvePriceId(body.plan);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = getAppUrl({ requireInProduction: true });
 
     if (!priceId) {
       throw new ApiError("Aucun tarif Stripe n'est configuré pour ce plan", 500);

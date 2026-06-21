@@ -3,6 +3,7 @@ import { ArrowUpRight, Command, Search, Sparkles } from "lucide-react";
 import { AppShellProviders } from "@/components/AppShellProviders";
 import { MotionReveal } from "@/components/MotionReveal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { navItems } from "@/lib/data";
 
@@ -19,13 +20,20 @@ export function AppShell({ active, title, eyebrow, action, children }: AppShellP
     <AppShellProviders>
       <main className="saas-shell">
         <aside className="saas-sidebar" aria-label="Navigation principale">
-          <Link className="saas-brand" href="/">
-            <span className="saas-brand-mark">W</span>
-            <div>
-              <strong>Welix</strong>
-              <span>CRM artisans premium</span>
+          <div className="saas-sidebar-top">
+            <Link className="saas-brand" href="/">
+              <span className="saas-brand-mark">W</span>
+              <div>
+                <strong>Welix</strong>
+                <span>CRM artisans premium</span>
+              </div>
+            </Link>
+
+            <div className="saas-sidebar-intro">
+              <Badge tone="success">Workspace actif</Badge>
+              <p>Un espace plus clair pour suivre le pipeline, les devis et les relances sans friction.</p>
             </div>
-          </Link>
+          </div>
 
           <nav className="saas-nav">
             {navItems.map((item) => {
@@ -37,7 +45,9 @@ export function AppShell({ active, title, eyebrow, action, children }: AppShellP
                   href={item.href}
                   key={item.href}
                 >
-                  <Icon size={17} strokeWidth={2.1} />
+                  <span className="saas-nav-icon-shell">
+                    <Icon size={17} strokeWidth={2.1} />
+                  </span>
                   <span>{item.label}</span>
                 </Link>
               );
@@ -49,15 +59,27 @@ export function AppShell({ active, title, eyebrow, action, children }: AppShellP
               <Sparkles size={16} />
               <span>Assistant IA</span>
             </div>
-            <p>Prépare les devis, accélère les relances et garde une vision claire du pipeline.</p>
+            <p>Prepare les devis, accelere les relances et garde une vision claire du pipeline.</p>
+            <div className="saas-sidebar-card-pills">
+              <span>Analyse</span>
+              <span>Devis</span>
+              <span>Suivi</span>
+            </div>
           </div>
         </aside>
 
         <section className="saas-workspace">
           <header className="saas-header">
-            <div>
-              <p className="section-kicker">{eyebrow}</p>
+            <div className="saas-header-copy">
+              <div className="saas-header-kicker-row">
+                <p className="section-kicker">{eyebrow}</p>
+                <span className="saas-header-dot" aria-hidden="true" />
+                <span className="saas-header-caption">Experience premium</span>
+              </div>
               <h1>{title}</h1>
+              <p className="saas-header-subtitle">
+                Une interface plus calme, plus lisible et plus decisive pour piloter l&apos;activite au quotidien.
+              </p>
             </div>
 
             <div className="saas-header-actions">
@@ -82,7 +104,9 @@ export function AppShell({ active, title, eyebrow, action, children }: AppShellP
             </div>
           </header>
 
-          <MotionReveal>{children}</MotionReveal>
+          <MotionReveal>
+            <div className="workspace-stack">{children}</div>
+          </MotionReveal>
         </section>
       </main>
     </AppShellProviders>

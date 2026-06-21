@@ -46,13 +46,17 @@ describe("QuotesWorkspace", () => {
   });
 
   it("shows a validation toast when description is missing", async () => {
-    render(<QuotesWorkspace clients={clients} initialQuotes={[quote]} />);
+    const { container } = render(<QuotesWorkspace clients={clients} initialQuotes={[quote]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /créer un devis/i }));
+    const launchButton = container.querySelector(".crm-toolbar .primary-button");
+    expect(launchButton).not.toBeNull();
+    fireEvent.click(launchButton as HTMLButtonElement);
     fireEvent.change(screen.getByLabelText(/description/i), {
       target: { value: "" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /créer le devis|enregistrer/i }));
+    const saveButton = container.querySelector(".overlay-actions .primary-button");
+    expect(saveButton).not.toBeNull();
+    fireEvent.click(saveButton as HTMLButtonElement);
 
     expect(
       await screen.findByText(/choisis un client et renseigne une description/i),

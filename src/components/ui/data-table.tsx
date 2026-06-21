@@ -38,6 +38,7 @@ export function DataTable<T>({
       {rows.map((row) => (
         <div
           className="ui-data-table-row"
+          data-interactive="true"
           key={rowKey(row)}
           style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
         >

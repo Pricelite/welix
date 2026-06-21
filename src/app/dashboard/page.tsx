@@ -6,6 +6,7 @@ import {
   FileText,
   Goal,
   ReceiptText,
+  Sparkles,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
@@ -29,12 +30,12 @@ import { getDashboardSnapshot } from "@/lib/workspace";
 
 function getStatusTone(status: string): "info" | "success" | "warning" | "neutral" {
   switch (status.toLowerCase()) {
-    case "accepté":
-    case "payé":
+    case "accept\u00e9":
+    case "pay\u00e9":
       return "success";
-    case "envoyé":
+    case "envoy\u00e9":
       return "info";
-    case "refusé":
+    case "refus\u00e9":
       return "warning";
     default:
       return "neutral";
@@ -45,18 +46,19 @@ export default async function DashboardPage() {
   const user = await requireAuthenticatedUser();
   const snapshot = await getDashboardSnapshot(user.id);
   const maxRevenue = Math.max(...snapshot.monthlyRevenue.map((item) => item.value), 1);
+  const setupMode = snapshot.metrics.clientCount === 0 || snapshot.metrics.quoteCount === 0;
 
   const metricCards = [
     {
       label: "Chiffre d'affaires",
       value: formatCurrency(snapshot.metrics.revenue),
-      detail: "Basé sur les factures enregistrées",
+      detail: "Base facturation consolid\u00e9e",
       icon: CircleDollarSign,
     },
     {
       label: "Clients actifs",
       value: String(snapshot.metrics.clientCount),
-      detail: "Hors clients archivés",
+      detail: "Hors fiches archivees",
       icon: UsersRound,
     },
     {
@@ -68,8 +70,29 @@ export default async function DashboardPage() {
     {
       label: "Factures",
       value: String(snapshot.metrics.invoiceCount),
-      detail: "Documents prêts au suivi",
+      detail: "Suivi financier en cours",
       icon: ReceiptText,
+    },
+  ];
+
+  const onboardingSteps = [
+    {
+      title: "Creer la premiere fiche client",
+      description: "Commence par une base propre pour centraliser les informations et l'historique.",
+      href: "/clients",
+      label: "Ouvrir les clients",
+    },
+    {
+      title: "Generer un premier devis",
+      description: "Passe d'une note chantier a une proposition presentable en quelques instants.",
+      href: "/devis/nouveau",
+      label: "Lancer un devis",
+    },
+    {
+      title: "Structurer le suivi commercial",
+      description: "Une fois les premiers devis crees, les statuts et notifications prennent le relais.",
+      href: "/devis",
+      label: "Voir l'historique",
     },
   ];
 
@@ -80,16 +103,19 @@ export default async function DashboardPage() {
           <Card className="hero-card">
             <CardContent className="hero-card-content">
               <div>
-                <Badge tone="success">Espace opérationnel</Badge>
-                <h2>Un cockpit clair pour piloter les ventes, les factures et la relation client.</h2>
+                <div className="workspace-hero-meta">
+                  <Badge tone="success">Espace operationnel</Badge>
+                  <Badge tone="info">Vue executive</Badge>
+                </div>
+                <h2>Un cockpit premium pour piloter la relation client, les devis et la facturation.</h2>
                 <p>
-                  Welix centralise l&apos;activité réelle de ton espace, sans données fictives,
-                  dans une interface plus nette et plus rapide à lire.
+                  Welix centralise l&apos;activite reelle de ton espace dans une interface plus nette,
+                  plus calme et plus rassurante a consulter au quotidien.
                 </p>
                 <div className="hero-card-actions">
                   <Link href="/devis/nouveau">
                     <Button size="lg">
-                      Créer un devis
+                      Creer un devis
                       <ArrowRight size={16} />
                     </Button>
                   </Link>
@@ -118,6 +144,39 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </MotionReveal>
+
+        {setupMode ? (
+          <MotionReveal delay={0.04}>
+            <Card className="quickstart-panel">
+              <CardHeader>
+                <div className="card-header-inline">
+                  <div>
+                    <CardTitle>Onboarding guide</CardTitle>
+                    <CardDescription>Les trois etapes utiles pour mettre l&apos;espace en rythme.</CardDescription>
+                  </div>
+                  <Badge tone="warning">
+                    <Sparkles size={14} />
+                    Demarrage
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="quickstart-grid">
+                {onboardingSteps.map((step, index) => (
+                  <article className="quickstart-card" key={step.title}>
+                    <span className="quickstart-step">0{index + 1}</span>
+                    <strong>{step.title}</strong>
+                    <p>{step.description}</p>
+                    <Link href={step.href}>
+                      <Button size="sm" variant="ghost">
+                        {step.label}
+                      </Button>
+                    </Link>
+                  </article>
+                ))}
+              </CardContent>
+            </Card>
+          </MotionReveal>
+        ) : null}
 
         <section className="premium-metrics-grid">
           {metricCards.map((metric, index) => {
@@ -148,12 +207,12 @@ export default async function DashboardPage() {
               <CardHeader>
                 <div className="card-header-inline">
                   <div>
-                    <CardTitle>Évolution du chiffre d&apos;affaires</CardTitle>
+                    <CardTitle>Evolution du chiffre d&apos;affaires</CardTitle>
                     <CardDescription>Six derniers mois glissants</CardDescription>
                   </div>
                   <Badge tone="info">
                     <TrendingUp size={14} />
-                    Vue réelle
+                    Vue reelle
                   </Badge>
                 </div>
               </CardHeader>
@@ -179,7 +238,7 @@ export default async function DashboardPage() {
                 <div className="card-header-inline">
                   <div>
                     <CardTitle>Objectifs</CardTitle>
-                    <CardDescription>Progression calculée sur les données actuelles</CardDescription>
+                    <CardDescription>Progression calculee sur les donnees actuelles</CardDescription>
                   </div>
                   <Badge tone="warning">
                     <Goal size={14} />
@@ -218,8 +277,8 @@ export default async function DashboardPage() {
           <MotionReveal delay={0.18}>
             <Card>
               <CardHeader>
-                <CardTitle>Activité récente</CardTitle>
-                <CardDescription>Dernières actions utiles à suivre</CardDescription>
+                <CardTitle>Activite recente</CardTitle>
+                <CardDescription>Dernieres actions utiles a suivre</CardDescription>
               </CardHeader>
               <CardContent className="activity-stack">
                 {snapshot.activity.length ? (
@@ -242,9 +301,9 @@ export default async function DashboardPage() {
                         </Button>
                       </Link>
                     }
-                    description="Ajoute des clients, crée des devis ou enregistre des factures pour voir remonter l'activité réelle."
+                    description="Ajoute des clients, cree des devis ou enregistre des factures pour voir remonter l'activite reelle."
                     icon={<TrendingUp size={18} />}
-                    title="Aucune activité récente"
+                    title="Aucune activite recente"
                   />
                 )}
               </CardContent>
@@ -279,7 +338,7 @@ export default async function DashboardPage() {
                   ))
                 ) : (
                   <EmptyState
-                    description="Les notifications intelligentes apparaîtront ici selon les devis acceptés, les factures et les nouveaux clients."
+                    description="Les notifications intelligentes apparaitront ici selon les devis acceptes, les factures et les nouveaux clients."
                     icon={<Bell size={18} />}
                     title="Aucune notification"
                   />
@@ -296,7 +355,7 @@ export default async function DashboardPage() {
                 <div className="card-header-inline">
                   <div>
                     <CardTitle>Derniers devis</CardTitle>
-                    <CardDescription>Vision commerciale immédiate</CardDescription>
+                    <CardDescription>Vision commerciale immediate</CardDescription>
                   </div>
                   <Link href="/devis">
                     <Button size="sm" variant="ghost">
@@ -333,10 +392,10 @@ export default async function DashboardPage() {
                     <EmptyState
                       action={
                         <Link href="/devis/nouveau">
-                          <Button size="sm">Créer un devis</Button>
+                          <Button size="sm">Creer un devis</Button>
                         </Link>
                       }
-                      description="Les devis enregistrés apparaîtront ici."
+                      description="Les devis enregistres apparaitront ici."
                       icon={<FileText size={18} />}
                       title="Aucun devis"
                     />
@@ -353,8 +412,8 @@ export default async function DashboardPage() {
               <CardHeader>
                 <div className="card-header-inline">
                   <div>
-                    <CardTitle>Dernières factures</CardTitle>
-                    <CardDescription>Suivi de facturation en temps réel</CardDescription>
+                    <CardTitle>Dernieres factures</CardTitle>
+                    <CardDescription>Suivi de facturation en temps reel</CardDescription>
                   </div>
                   <Link href="/factures">
                     <Button size="sm" variant="ghost">
@@ -389,7 +448,7 @@ export default async function DashboardPage() {
                   ]}
                   empty={
                     <EmptyState
-                      description="Aucune facture n'est encore remontée dans le CRM."
+                      description="Aucune facture n'est encore remontee dans le CRM."
                       icon={<ReceiptText size={18} />}
                       title="Aucune facture"
                     />

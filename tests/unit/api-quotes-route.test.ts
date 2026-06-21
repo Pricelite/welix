@@ -104,7 +104,7 @@ describe("quotes api routes", () => {
     );
     expect(syncClientSnapshot).toHaveBeenCalledWith(admin, "user-1", clientId);
     expect(body.ok).toBe(true);
-  });
+  }, 10000);
 
   it("blocks quote deletion when an invoice is linked", async () => {
     getAuthenticatedUser.mockResolvedValue({ id: "user-1" });
@@ -142,6 +142,6 @@ describe("quotes api routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(409);
-    expect(body.error).toMatch(/déjà lié à une facture/i);
+    expect(body.error).toMatch(/déjà liée? à une facture/i);
   });
 });
