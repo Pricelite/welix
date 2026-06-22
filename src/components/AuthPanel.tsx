@@ -18,6 +18,50 @@ const callbackMessages: Record<string, string> = {
     "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
 };
 
+function getReadableSupabaseError(message: string) {
+  const normalizedMessage = message.trim();
+
+  if (/invalid login credentials|invalid_credentials/i.test(normalizedMessage)) {
+    return "Email ou mot de passe incorrect.";
+  }
+
+  if (/email not confirmed/i.test(normalizedMessage)) {
+    return "Ton email n'est pas encore confirmé. Vérifie ta boîte mail.";
+  }
+
+  if (/signup is disabled/i.test(normalizedMessage)) {
+    return "La création de compte est désactivée pour le moment.";
+  }
+
+  if (/user already registered/i.test(normalizedMessage)) {
+    return "Un compte existe déjà avec cet email.";
+  }
+
+  return normalizedMessage;
+}
+
+function getReadableAuthError(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    const normalizedMessage = error.message.trim();
+
+    if (
+      /failed to fetch|fetch failed|networkerror|network request failed|load failed/i.test(
+        normalizedMessage,
+      )
+    ) {
+      return "Impossible de joindre la connexion sécurisée. Vérifie Internet puis réessaie.";
+    }
+
+    if (/invalid public environment|supabaseurl is required|anon key/i.test(normalizedMessage)) {
+      return "La configuration de connexion Supabase est incomplète sur cette instance.";
+    }
+
+    return normalizedMessage;
+  }
+
+  return "La connexion est indisponible pour le moment. Réessaie dans un instant.";
+}
+
 export function AuthPanel({ mode, errorCode, variant = "page" }: AuthPanelProps) {
   const isSignup = mode === "inscription";
   const passwordFieldId = isSignup ? "signup-password" : "login-password";
@@ -74,15 +118,16 @@ export function AuthPanel({ mode, errorCode, variant = "page" }: AuthPanelProps)
         : await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
-        setMessage(error.message);
+        setMessage(getReadableSupabaseError(error.message));
       } else if (isSignup) {
         setMessage("Compte créé. Vérifie ton email pour confirmer l'inscription.");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch {
-      setMessage("La connexion est indisponible pour le moment. Réessaie dans un instant.");
+    } catch (error) {
+      console.error("AuthPanel submitAuth failed", error);
+      setMessage(getReadableAuthError(error));
     } finally {
       setLoading(false);
     }

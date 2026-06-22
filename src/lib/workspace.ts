@@ -147,12 +147,33 @@ type InvoiceQueryRow = {
   quote: { quote_number: string | null }[] | { quote_number: string | null } | null;
 };
 
+type BasicClientRow = Omit<ClientQueryRow, "last_quote">;
+type BasicQuoteRow = Omit<QuoteQueryRow, "client">;
+type BasicInvoiceRow = Omit<InvoiceQueryRow, "client" | "quote">;
+
+const clientSelect =
+  "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)";
+const quoteSelect =
+  "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)";
+const invoiceSelect =
+  "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at, client:clients!invoices_client_id_fkey(id, name), quote:quotes!invoices_quote_id_fkey(quote_number)";
+const clientBaseSelect =
+  "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id";
+const quoteBaseSelect =
+  "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at";
+const invoiceBaseSelect =
+  "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at";
+
 function pickSingle<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
   }
 
   return value ?? null;
+}
+
+function isMissingSchemaResource(message: string) {
+  return /schema cache|could not find the table|relationship between/i.test(message);
 }
 
 function formatRelativeTime(dateValue: string | null) {
@@ -207,7 +228,7 @@ function normalizeQuote(row: QuoteQueryRow): QuoteRecord {
     id: row.id,
     quoteNumber: row.quote_number,
     clientId: row.client_id,
-    clientName: client?.name || "Client non renseign\u00e9",
+    clientName: client?.name || "Client non renseigne",
     trade: row.trade,
     status: row.status,
     date: row.date,
@@ -234,7 +255,7 @@ function normalizeInvoice(row: InvoiceQueryRow): InvoiceRecord {
     id: row.id,
     invoiceNumber: row.invoice_number,
     clientId: row.client_id,
-    clientName: client?.name || "Client non renseign\u00e9",
+    clientName: client?.name || "Client non renseigne",
     quoteId: row.quote_id,
     quoteNumber: quote?.quote_number ?? null,
     status: row.status,
@@ -249,12 +270,40 @@ function normalizeInvoice(row: InvoiceQueryRow): InvoiceRecord {
   };
 }
 
-const clientSelect =
-  "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)";
-const quoteSelect =
-  "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)";
-const invoiceSelect =
-  "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at, client:clients!invoices_client_id_fkey(id, name), quote:quotes!invoices_quote_id_fkey(quote_number)";
+function buildClientMap(clients: ClientRecord[]) {
+  return new Map(clients.map((client) => [client.id, client]));
+}
+
+function buildQuoteMap(quotes: QuoteRecord[]) {
+  return new Map(quotes.map((quote) => [quote.id, quote]));
+}
+
+function normalizeQuoteFromBasic(
+  row: BasicQuoteRow,
+  clientsById: Map<string, ClientRecord>,
+): QuoteRecord {
+  const client = row.client_id ? clientsById.get(row.client_id) : null;
+
+  return normalizeQuote({
+    ...row,
+    client: client ? { id: client.id, name: client.name } : null,
+  });
+}
+
+function normalizeInvoiceFromBasic(
+  row: BasicInvoiceRow,
+  clientsById: Map<string, ClientRecord>,
+  quotesById: Map<string, QuoteRecord>,
+): InvoiceRecord {
+  const client = clientsById.get(row.client_id);
+  const quote = row.quote_id ? quotesById.get(row.quote_id) : null;
+
+  return normalizeInvoice({
+    ...row,
+    client: client ? { id: client.id, name: client.name } : null,
+    quote: quote ? { quote_number: quote.quoteNumber } : null,
+  });
+}
 
 export const listClientsForUser = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
@@ -263,6 +312,22 @@ export const listClientsForUser = cache(async (userId: string) => {
     .select(clientSelect)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  if (error && isMissingSchemaResource(error.message)) {
+    const fallback = await supabase
+      .from("clients")
+      .select(clientBaseSelect)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (fallback.error) {
+      throw new Error(`Impossible de charger les clients: ${fallback.error.message}`);
+    }
+
+    return ((fallback.data as BasicClientRow[] | null) ?? []).map((row) =>
+      normalizeClient({ ...row, last_quote: null }),
+    );
+  }
 
   if (error) {
     throw new Error(`Impossible de charger les clients: ${error.message}`);
@@ -279,6 +344,24 @@ export const listQuotesForUser = cache(async (userId: string) => {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
+  if (error && isMissingSchemaResource(error.message)) {
+    const fallback = await supabase
+      .from("quotes")
+      .select(quoteBaseSelect)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (fallback.error) {
+      throw new Error(`Impossible de charger les devis: ${fallback.error.message}`);
+    }
+
+    const clientsById = buildClientMap(await listClientsForUser(userId));
+
+    return ((fallback.data as BasicQuoteRow[] | null) ?? []).map((row) =>
+      normalizeQuoteFromBasic(row, clientsById),
+    );
+  }
+
   if (error) {
     throw new Error(`Impossible de charger les devis: ${error.message}`);
   }
@@ -293,6 +376,33 @@ export const listInvoicesForUser = cache(async (userId: string) => {
     .select(invoiceSelect)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  if (error && /could not find the table/i.test(error.message)) {
+    return [];
+  }
+
+  if (error && isMissingSchemaResource(error.message)) {
+    const fallback = await supabase
+      .from("invoices")
+      .select(invoiceBaseSelect)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (fallback.error) {
+      if (/could not find the table/i.test(fallback.error.message)) {
+        return [];
+      }
+
+      throw new Error(`Impossible de charger les factures: ${fallback.error.message}`);
+    }
+
+    const clientsById = buildClientMap(await listClientsForUser(userId));
+    const quotesById = buildQuoteMap(await listQuotesForUser(userId));
+
+    return ((fallback.data as BasicInvoiceRow[] | null) ?? []).map((row) =>
+      normalizeInvoiceFromBasic(row, clientsById, quotesById),
+    );
+  }
 
   if (error) {
     throw new Error(`Impossible de charger les factures: ${error.message}`);
@@ -323,7 +433,7 @@ function buildGoals(revenue: number, clientCount: number, quoteCount: number): D
     },
     {
       id: "quotes",
-      label: "Objectif de devis émis",
+      label: "Objectif de devis emis",
       current: quoteCount,
       target: quoteTarget,
       unit: "devis",
@@ -332,130 +442,34 @@ function buildGoals(revenue: number, clientCount: number, quoteCount: number): D
 }
 
 export const getDashboardSnapshot = cache(async (userId: string): Promise<DashboardSnapshot> => {
-  const supabase = await createSupabaseServerClient();
   const now = new Date();
   const lateInvoiceThreshold = now.toISOString().slice(0, 10);
-  const revenueWindowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
-
-  const [
-    { count: clientCount, error: clientCountError },
-    { count: quoteCount, error: quoteCountError },
-    { count: invoiceCount, error: invoiceCountError },
-    { count: pendingQuotes, error: pendingQuotesError },
-    { data: latestQuotesRows, error: latestQuotesError },
-    { data: latestInvoicesRows, error: latestInvoicesError },
-    { data: acceptedQuoteRow, error: acceptedQuoteError },
-    { data: lateInvoiceRow, error: lateInvoiceError },
-    { data: newestClientRow, error: newestClientError },
-    { data: revenueWindowRows, error: revenueWindowError },
-  ] = await Promise.all([
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .is("archived_at", null),
-    supabase
-      .from("quotes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
-      .from("quotes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .neq("status", "Accepté"),
-    supabase
-      .from("quotes")
-      .select(quoteSelect)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(4),
-    supabase
-      .from("invoices")
-      .select(invoiceSelect)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(4),
-    supabase
-      .from("quotes")
-      .select(quoteSelect)
-      .eq("user_id", userId)
-      .eq("status", "Accepté")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("invoices")
-      .select(invoiceSelect)
-      .eq("user_id", userId)
-      .neq("status", "Payé")
-      .lt("due_at", lateInvoiceThreshold)
-      .order("due_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("clients")
-      .select(clientSelect)
-      .eq("user_id", userId)
-      .is("archived_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("invoices")
-      .select("total, created_at")
-      .eq("user_id", userId)
-      .gte("created_at", revenueWindowStart),
+  const [clients, quotes, invoices] = await Promise.all([
+    listClientsForUser(userId),
+    listQuotesForUser(userId),
+    listInvoicesForUser(userId),
   ]);
-
-  if (
-    clientCountError ||
-    quoteCountError ||
-    invoiceCountError ||
-    pendingQuotesError ||
-    latestQuotesError ||
-    latestInvoicesError ||
-    acceptedQuoteError ||
-    lateInvoiceError ||
-    newestClientError ||
-    revenueWindowError
-  ) {
-    throw new Error(
-      [
-        clientCountError,
-        quoteCountError,
-        invoiceCountError,
-        pendingQuotesError,
-        latestQuotesError,
-        latestInvoicesError,
-        acceptedQuoteError,
-        lateInvoiceError,
-        newestClientError,
-        revenueWindowError,
-      ]
-        .filter(Boolean)
-        .map((error) => error?.message)
-        .join(" | "),
-    );
-  }
-
-  const latestQuotes = ((latestQuotesRows as QuoteQueryRow[] | null) ?? []).map(normalizeQuote);
-  const latestInvoices = ((latestInvoicesRows as InvoiceQueryRow[] | null) ?? []).map(normalizeInvoice);
-  const acceptedQuote = acceptedQuoteRow ? normalizeQuote(acceptedQuoteRow as QuoteQueryRow) : null;
-  const lateInvoice = lateInvoiceRow ? normalizeInvoice(lateInvoiceRow as InvoiceQueryRow) : null;
-  const newestClient = newestClientRow ? normalizeClient(newestClientRow as ClientQueryRow) : null;
-  const revenueRows = (revenueWindowRows as Array<{ total: number | null; created_at: string | null }> | null) ?? [];
-  const revenue = revenueRows.reduce((sum, invoice) => sum + (invoice.total ?? 0), 0);
+  const activeClients = clients.filter((client) => !client.archivedAt);
+  const latestQuotes = quotes.slice(0, 4);
+  const latestInvoices = invoices.slice(0, 4);
+  const acceptedQuote =
+    quotes.find((quote) => quote.status.toLowerCase().includes("accept")) ?? null;
+  const lateInvoice =
+    invoices.find(
+      (invoice) =>
+        !invoice.status.toLowerCase().includes("pay") &&
+        typeof invoice.dueAt === "string" &&
+        invoice.dueAt < lateInvoiceThreshold,
+    ) ?? null;
+  const newestClient = activeClients[0] ?? null;
+  const revenue = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
 
   const metrics = {
     revenue: Number(revenue.toFixed(2)),
-    clientCount: clientCount ?? 0,
-    quoteCount: quoteCount ?? 0,
-    invoiceCount: invoiceCount ?? 0,
-    pendingQuotes: pendingQuotes ?? 0,
+    clientCount: activeClients.length,
+    quoteCount: quotes.length,
+    invoiceCount: invoices.length,
+    pendingQuotes: quotes.filter((quote) => !quote.status.toLowerCase().includes("accept")).length,
   };
 
   const monthlyRevenue = Array.from({ length: 6 }, (_, index) => {
@@ -464,16 +478,16 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
     date.setHours(0, 0, 0, 0);
 
     const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-    const value = revenueRows
+    const value = invoices
       .filter((invoice) => {
-        const createdAt = invoice.created_at ? new Date(invoice.created_at) : null;
+        const createdAt = invoice.createdAt ? new Date(invoice.createdAt) : null;
         return (
           createdAt &&
           !Number.isNaN(createdAt.getTime()) &&
           `${createdAt.getFullYear()}-${createdAt.getMonth()}` === monthKey
         );
       })
-      .reduce((sum, invoice) => sum + (invoice.total ?? 0), 0);
+      .reduce((sum, invoice) => sum + invoice.total, 0);
 
     return {
       month: new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(date),
@@ -501,8 +515,8 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
   if (acceptedQuote) {
     notifications.push({
       id: `quote-${acceptedQuote.id}`,
-      title: "Devis accepté",
-      detail: `${acceptedQuote.clientName} a validé ${acceptedQuote.quoteNumber}.`,
+      title: "Devis accepte",
+      detail: `${acceptedQuote.clientName} a valide ${acceptedQuote.quoteNumber}.`,
       time: formatRelativeTime(acceptedQuote.updatedAt || acceptedQuote.createdAt),
       tone: "success",
     });
@@ -512,7 +526,7 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
     notifications.push({
       id: `invoice-${lateInvoice.id}`,
       title: "Facture en retard",
-      detail: `${lateInvoice.invoiceNumber} attend encore un règlement client.`,
+      detail: `${lateInvoice.invoiceNumber} attend encore un reglement client.`,
       time: formatRelativeTime(lateInvoice.dueAt),
       tone: "warning",
     });
@@ -521,7 +535,7 @@ export const getDashboardSnapshot = cache(async (userId: string): Promise<Dashbo
   if (newestClient) {
     notifications.push({
       id: `client-${newestClient.id}`,
-      title: "Nouveau client ajouté",
+      title: "Nouveau client ajoute",
       detail: `${newestClient.name} est maintenant visible dans la relation client.`,
       time: formatRelativeTime(newestClient.createdAt),
       tone: "info",

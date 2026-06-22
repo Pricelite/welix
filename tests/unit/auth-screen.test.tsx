@@ -69,6 +69,25 @@ describe("AuthScreen", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a readable message when sign in throws", async () => {
+    signInWithPassword.mockRejectedValue(new Error("fetch failed"));
+
+    render(<AuthScreen mode="connexion" />);
+    fireEvent.change(screen.getByLabelText(/email professionnel/i), {
+      target: { value: "artisan@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/^mot de passe$/i), {
+      target: { value: "Password123!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
+
+    expect(
+      await screen.findByText(
+        /impossible de joindre la connexion sécurisée\. vérifie internet puis réessaie\./i,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("toggles the password visibility", () => {
     render(<AuthScreen mode="connexion" />);
 
