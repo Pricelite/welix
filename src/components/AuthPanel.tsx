@@ -14,8 +14,7 @@ type AuthPanelProps = {
 
 const callbackMessages: Record<string, string> = {
   missing_code: "Le lien de connexion est incomplet. Réessaie depuis l'email reçu.",
-  auth_callback_failed:
-    "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
+  auth_callback_failed: "La validation du lien a échoué. Réessaie ou demande un nouvel email.",
 };
 
 function getReadableSupabaseError(message: string) {

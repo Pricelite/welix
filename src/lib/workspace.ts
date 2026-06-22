@@ -148,8 +148,7 @@ type InvoiceQueryRow = {
 };
 
 type BasicClientRow = Omit<ClientQueryRow, "last_quote">;
-type BasicQuoteRow = Omit<QuoteQueryRow, "client">;
-type BasicInvoiceRow = Omit<InvoiceQueryRow, "client" | "quote">;
+type LooseRow = Record<string, unknown>;
 
 const clientSelect =
   "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id, last_quote:quotes!clients_last_quote_id_fkey(quote_number)";
@@ -157,13 +156,6 @@ const quoteSelect =
   "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at, client:clients!quotes_client_id_fkey(id, name)";
 const invoiceSelect =
   "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at, client:clients!invoices_client_id_fkey(id, name), quote:quotes!invoices_quote_id_fkey(quote_number)";
-const clientBaseSelect =
-  "id, name, contact, email, city, revenue, archived_at, created_at, last_quote_id";
-const quoteBaseSelect =
-  "id, quote_number, client_id, trade, status, date, description, material, labor, estimated_time, recommended_price, vat_rate, subtotal, vat, total, amount, created_at, updated_at";
-const invoiceBaseSelect =
-  "id, invoice_number, client_id, quote_id, status, issued_at, due_at, paid_at, subtotal, vat, total, amount, created_at";
-
 function pickSingle<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -174,6 +166,14 @@ function pickSingle<T>(value: T | T[] | null | undefined) {
 
 function isMissingSchemaResource(message: string) {
   return /schema cache|could not find the table|relationship between/i.test(message);
+}
+
+function isMissingColumnError(message: string) {
+  return /column .* does not exist|could not find the column/i.test(message);
+}
+
+function shouldUseLooseFallback(message: string) {
+  return isMissingSchemaResource(message) || isMissingColumnError(message);
 }
 
 function formatRelativeTime(dateValue: string | null) {
@@ -278,31 +278,83 @@ function buildQuoteMap(quotes: QuoteRecord[]) {
   return new Map(quotes.map((quote) => [quote.id, quote]));
 }
 
-function normalizeQuoteFromBasic(
-  row: BasicQuoteRow,
-  clientsById: Map<string, ClientRecord>,
-): QuoteRecord {
-  const client = row.client_id ? clientsById.get(row.client_id) : null;
-
-  return normalizeQuote({
-    ...row,
-    client: client ? { id: client.id, name: client.name } : null,
-  });
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
-function normalizeInvoiceFromBasic(
-  row: BasicInvoiceRow,
+function readNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeQuoteFromLoose(
+  row: LooseRow,
+  clientsById: Map<string, ClientRecord>,
+  index: number,
+): QuoteRecord {
+  const clientId = readString(row.client_id);
+  const client = clientId ? clientsById.get(clientId) : null;
+  const quoteNumber = readString(row.quote_number) ?? `DEVIS-${index + 1}`;
+  const description = readString(row.description) ?? "Devis enregistre";
+  const status = readString(row.status) ?? "Brouillon";
+  const total = readNumber(row.total);
+  const amount = readNumber(row.amount) || total;
+  const recommendedPrice = readNumber(row.recommended_price);
+  const subtotal = readNumber(row.subtotal) || recommendedPrice;
+
+  return {
+    id: readString(row.id) ?? `${quoteNumber}-${index}`,
+    quoteNumber,
+    clientId,
+    clientName: client?.name ?? readString(row.client_name) ?? "Client non renseigne",
+    trade: readString(row.trade),
+    status,
+    date: readString(row.date),
+    description,
+    material: readString(row.material),
+    labor: readString(row.labor),
+    estimatedTime: readString(row.estimated_time),
+    recommendedPrice,
+    vatRate: readNumber(row.vat_rate),
+    subtotal,
+    vat: readNumber(row.vat),
+    total,
+    amount,
+    createdAt: readString(row.created_at),
+    updatedAt: readString(row.updated_at),
+  };
+}
+
+function normalizeInvoiceFromLoose(
+  row: LooseRow,
   clientsById: Map<string, ClientRecord>,
   quotesById: Map<string, QuoteRecord>,
+  index: number,
 ): InvoiceRecord {
-  const client = clientsById.get(row.client_id);
-  const quote = row.quote_id ? quotesById.get(row.quote_id) : null;
+  const clientId = readString(row.client_id) ?? "";
+  const quoteId = readString(row.quote_id);
+  const client = clientId ? clientsById.get(clientId) : null;
+  const quote = quoteId ? quotesById.get(quoteId) : null;
+  const invoiceNumber = readString(row.invoice_number) ?? `FACT-${index + 1}`;
+  const total = readNumber(row.total);
+  const amount = readNumber(row.amount) || total;
 
-  return normalizeInvoice({
-    ...row,
-    client: client ? { id: client.id, name: client.name } : null,
-    quote: quote ? { quote_number: quote.quoteNumber } : null,
-  });
+  return {
+    id: readString(row.id) ?? `${invoiceNumber}-${index}`,
+    invoiceNumber,
+    clientId,
+    clientName: client?.name ?? readString(row.client_name) ?? "Client non renseigne",
+    quoteId,
+    quoteNumber: quote?.quoteNumber ?? readString(row.quote_number),
+    status: readString(row.status) ?? "emise",
+    issuedAt: readString(row.issued_at),
+    dueAt: readString(row.due_at),
+    paidAt: readString(row.paid_at),
+    subtotal: readNumber(row.subtotal),
+    vat: readNumber(row.vat),
+    total,
+    amount,
+    createdAt: readString(row.created_at),
+  };
 }
 
 export const listClientsForUser = cache(async (userId: string) => {
@@ -313,10 +365,10 @@ export const listClientsForUser = cache(async (userId: string) => {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error && isMissingSchemaResource(error.message)) {
+  if (error && shouldUseLooseFallback(error.message)) {
     const fallback = await supabase
       .from("clients")
-      .select(clientBaseSelect)
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -324,8 +376,19 @@ export const listClientsForUser = cache(async (userId: string) => {
       throw new Error(`Impossible de charger les clients: ${fallback.error.message}`);
     }
 
-    return ((fallback.data as BasicClientRow[] | null) ?? []).map((row) =>
-      normalizeClient({ ...row, last_quote: null }),
+    return ((fallback.data as Array<BasicClientRow & LooseRow> | null) ?? []).map((row) =>
+      normalizeClient({
+        id: readString(row.id) ?? "",
+        name: readString(row.name) ?? "Client sans nom",
+        contact: readString(row.contact),
+        email: readString(row.email),
+        city: readString(row.city),
+        revenue: readNumber(row.revenue),
+        archived_at: readString(row.archived_at),
+        created_at: readString(row.created_at),
+        last_quote_id: readString(row.last_quote_id),
+        last_quote: null,
+      }),
     );
   }
 
@@ -344,25 +407,33 @@ export const listQuotesForUser = cache(async (userId: string) => {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error && isMissingSchemaResource(error.message)) {
+  if (error && shouldUseLooseFallback(error.message)) {
     const fallback = await supabase
       .from("quotes")
-      .select(quoteBaseSelect)
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (fallback.error) {
+      if (/could not find the table/i.test(fallback.error.message)) {
+        return [];
+      }
+
       throw new Error(`Impossible de charger les devis: ${fallback.error.message}`);
     }
 
     const clientsById = buildClientMap(await listClientsForUser(userId));
 
-    return ((fallback.data as BasicQuoteRow[] | null) ?? []).map((row) =>
-      normalizeQuoteFromBasic(row, clientsById),
+    return ((fallback.data as LooseRow[] | null) ?? []).map((row, index) =>
+      normalizeQuoteFromLoose(row, clientsById, index),
     );
   }
 
   if (error) {
+    if (/could not find the table/i.test(error.message)) {
+      return [];
+    }
+
     throw new Error(`Impossible de charger les devis: ${error.message}`);
   }
 
@@ -381,10 +452,10 @@ export const listInvoicesForUser = cache(async (userId: string) => {
     return [];
   }
 
-  if (error && isMissingSchemaResource(error.message)) {
+  if (error && shouldUseLooseFallback(error.message)) {
     const fallback = await supabase
       .from("invoices")
-      .select(invoiceBaseSelect)
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -399,8 +470,8 @@ export const listInvoicesForUser = cache(async (userId: string) => {
     const clientsById = buildClientMap(await listClientsForUser(userId));
     const quotesById = buildQuoteMap(await listQuotesForUser(userId));
 
-    return ((fallback.data as BasicInvoiceRow[] | null) ?? []).map((row) =>
-      normalizeInvoiceFromBasic(row, clientsById, quotesById),
+    return ((fallback.data as LooseRow[] | null) ?? []).map((row, index) =>
+      normalizeInvoiceFromLoose(row, clientsById, quotesById, index),
     );
   }
 
