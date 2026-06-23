@@ -125,7 +125,6 @@ export function AuthPanel({ mode, errorCode, variant = "page" }: AuthPanelProps)
         router.refresh();
       }
     } catch (error) {
-      console.error("AuthPanel submitAuth failed", error);
       setMessage(getReadableAuthError(error));
     } finally {
       setLoading(false);

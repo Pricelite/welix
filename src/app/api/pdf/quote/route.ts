@@ -104,7 +104,7 @@ export async function GET(request: Request) {
     doc.setFontSize(24);
     doc.text(profile?.company_name || "Welix", 16, 18);
     doc.setFontSize(10);
-    doc.text(profile?.trade || "CRM & devis professionnels", 16, 24);
+    doc.text(profile?.trade || "CRM et devis professionnels", 16, 24);
 
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(20);
@@ -112,8 +112,22 @@ export async function GET(request: Request) {
     doc.setFontSize(11);
     doc.text(quote.quote_number, 150, 24);
 
-    drawLabelValue(doc, "Émetteur", profile?.full_name || profile?.company_name || "Profil Welix", 16, 46, 70);
-    drawLabelValue(doc, "Contact", [profile?.email, profile?.phone].filter(Boolean).join(" • ") || "-", 16, 62, 80);
+    drawLabelValue(
+      doc,
+      "Émetteur",
+      profile?.full_name || profile?.company_name || "Profil Welix",
+      16,
+      46,
+      70,
+    );
+    drawLabelValue(
+      doc,
+      "Contact",
+      [profile?.email, profile?.phone].filter(Boolean).join(" • ") || "-",
+      16,
+      62,
+      80,
+    );
     drawLabelValue(doc, "Adresse", profile?.address || "-", 16, 78, 80);
 
     drawLabelValue(doc, "Client", client?.name || "Client non renseigné", 110, 46, 70);
@@ -145,7 +159,7 @@ export async function GET(request: Request) {
     doc.text("Montant", 184, 151, { align: "right" });
 
     const rowsToRender = [
-      ["Matériaux", toPdfText(quote.material, "Selon besoins du chantier"), ""],
+      ["Matériaux", toPdfText(quote.material, "Selon les besoins du chantier"), ""],
       ["Main d'œuvre", toPdfText(quote.labor, "Préparation, exécution et finitions"), ""],
       ["Durée estimée", toPdfText(quote.estimated_time, "À confirmer"), ""],
       ["Sous-total HT", "Montant calculé du devis", formatCurrency(subtotal)],
@@ -196,3 +210,4 @@ export async function GET(request: Request) {
     return jsonError(error, "Erreur serveur lors de la génération du PDF");
   }
 }
+

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 import { AuthPanel } from "@/components/AuthPanel";
 import { Modal } from "@/components/ui/modal";

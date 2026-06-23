@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import { Providers } from "@/components/Providers";
+import { WeliProvider } from "@/components/weli/WeliProvider";
 import { getDefaultOgImage, getSiteName, getSiteUrl, isIndexableEnvironment } from "@/lib/site";
 import "./globals.css";
 
@@ -73,8 +75,12 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={manrope.variable}>
-        {children}
-        <AnalyticsProvider />
+        <Providers>
+          <WeliProvider>
+            {children}
+            <AnalyticsProvider />
+          </WeliProvider>
+        </Providers>
       </body>
     </html>
   );

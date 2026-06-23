@@ -36,18 +36,22 @@ export function jsonError(error: unknown, fallbackMessage = "Erreur serveur") {
 
   if (error instanceof Error) {
     captureException(error, { area: "api", fallbackMessage });
-    return NextResponse.json({ error: `${fallbackMessage} : ${error.message}` }, { status: 500 });
+    return NextResponse.json({ error: fallbackMessage }, { status: 500 });
   }
 
   return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }
 
-export async function parseJson<T>(request: Request, schema: {
-  parse: (value: unknown) => T;
-}) {
+export async function parseJson<T>(
+  request: Request,
+  schema: {
+    parse: (value: unknown) => T;
+  },
+) {
   const body = await request.json().catch(() => {
     throw new ApiError("Corps JSON invalide", 400);
   });
 
   return schema.parse(body);
 }
+

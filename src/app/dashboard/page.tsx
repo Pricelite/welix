@@ -30,12 +30,12 @@ import { getDashboardSnapshot } from "@/lib/workspace";
 
 function getStatusTone(status: string): "info" | "success" | "warning" | "neutral" {
   switch (status.toLowerCase()) {
-    case "accept\u00e9":
-    case "pay\u00e9":
+    case "accepté":
+    case "payé":
       return "success";
-    case "envoy\u00e9":
+    case "envoyé":
       return "info";
-    case "refus\u00e9":
+    case "refusé":
       return "warning";
     default:
       return "neutral";
@@ -52,13 +52,13 @@ export default async function DashboardPage() {
     {
       label: "Chiffre d'affaires",
       value: formatCurrency(snapshot.metrics.revenue),
-      detail: "Base facturation consolid\u00e9e",
+      detail: "Base facturation consolidée",
       icon: CircleDollarSign,
     },
     {
       label: "Clients actifs",
       value: String(snapshot.metrics.clientCount),
-      detail: "Hors fiches archivees",
+      detail: "Hors fiches archivées",
       icon: UsersRound,
     },
     {
@@ -77,20 +77,20 @@ export default async function DashboardPage() {
 
   const onboardingSteps = [
     {
-      title: "Creer la premiere fiche client",
+      title: "Créer la première fiche client",
       description: "Commence par une base propre pour centraliser les informations et l'historique.",
       href: "/clients",
       label: "Ouvrir les clients",
     },
     {
-      title: "Generer un premier devis",
-      description: "Passe d'une note chantier a une proposition presentable en quelques instants.",
+      title: "Générer un premier devis",
+      description: "Passe d'une note chantier à une proposition présentable en quelques instants.",
       href: "/devis/nouveau",
       label: "Lancer un devis",
     },
     {
       title: "Structurer le suivi commercial",
-      description: "Une fois les premiers devis crees, les statuts et notifications prennent le relais.",
+      description: "Une fois les premiers devis créés, les statuts et notifications prennent le relais.",
       href: "/devis",
       label: "Voir l'historique",
     },
@@ -104,18 +104,18 @@ export default async function DashboardPage() {
             <CardContent className="hero-card-content">
               <div>
                 <div className="workspace-hero-meta">
-                  <Badge tone="success">Espace operationnel</Badge>
-                  <Badge tone="info">Vue executive</Badge>
+                  <Badge tone="success">Espace opérationnel</Badge>
+                  <Badge tone="info">Vue exécutive</Badge>
                 </div>
                 <h2>Un cockpit premium pour piloter la relation client, les devis et la facturation.</h2>
                 <p>
-                  Welix centralise l&apos;activite reelle de ton espace dans une interface plus nette,
-                  plus calme et plus rassurante a consulter au quotidien.
+                  Welix centralise l&apos;activité réelle de ton espace dans une interface plus nette,
+                  plus calme et plus rassurante à consulter au quotidien.
                 </p>
                 <div className="hero-card-actions">
                   <Link href="/devis/nouveau">
                     <Button size="lg">
-                      Creer un devis
+                      Créer un devis
                       <ArrowRight size={16} />
                     </Button>
                   </Link>
@@ -152,11 +152,11 @@ export default async function DashboardPage() {
                 <div className="card-header-inline">
                   <div>
                     <CardTitle>Onboarding guide</CardTitle>
-                    <CardDescription>Les trois etapes utiles pour mettre l&apos;espace en rythme.</CardDescription>
+                    <CardDescription>Les trois étapes utiles pour mettre l&apos;espace en rythme.</CardDescription>
                   </div>
                   <Badge tone="warning">
                     <Sparkles size={14} />
-                    Demarrage
+                    Démarrage
                   </Badge>
                 </div>
               </CardHeader>
@@ -207,12 +207,12 @@ export default async function DashboardPage() {
               <CardHeader>
                 <div className="card-header-inline">
                   <div>
-                    <CardTitle>Evolution du chiffre d&apos;affaires</CardTitle>
+                    <CardTitle>Évolution du chiffre d&apos;affaires</CardTitle>
                     <CardDescription>Six derniers mois glissants</CardDescription>
                   </div>
                   <Badge tone="info">
                     <TrendingUp size={14} />
-                    Vue reelle
+                    Vue réelle
                   </Badge>
                 </div>
               </CardHeader>
@@ -238,7 +238,7 @@ export default async function DashboardPage() {
                 <div className="card-header-inline">
                   <div>
                     <CardTitle>Objectifs</CardTitle>
-                    <CardDescription>Progression calculee sur les donnees actuelles</CardDescription>
+                    <CardDescription>Progression calculée sur les données actuelles</CardDescription>
                   </div>
                   <Badge tone="warning">
                     <Goal size={14} />
@@ -277,8 +277,8 @@ export default async function DashboardPage() {
           <MotionReveal delay={0.18}>
             <Card>
               <CardHeader>
-                <CardTitle>Activite recente</CardTitle>
-                <CardDescription>Dernieres actions utiles a suivre</CardDescription>
+                <CardTitle>Activité récente</CardTitle>
+                <CardDescription>Dernières actions utiles à suivre</CardDescription>
               </CardHeader>
               <CardContent className="activity-stack">
                 {snapshot.activity.length ? (
@@ -301,9 +301,9 @@ export default async function DashboardPage() {
                         </Button>
                       </Link>
                     }
-                    description="Ajoute des clients, cree des devis ou enregistre des factures pour voir remonter l'activite reelle."
+                    description="Ajoute des clients, crée des devis ou enregistre des factures pour voir remonter l'activité réelle."
                     icon={<TrendingUp size={18} />}
-                    title="Aucune activite recente"
+                    title="Aucune activité récente"
                   />
                 )}
               </CardContent>
@@ -338,7 +338,7 @@ export default async function DashboardPage() {
                   ))
                 ) : (
                   <EmptyState
-                    description="Les notifications intelligentes apparaitront ici selon les devis acceptes, les factures et les nouveaux clients."
+                    description="Les notifications intelligentes apparaîtront ici selon les devis acceptés, les factures et les nouveaux clients."
                     icon={<Bell size={18} />}
                     title="Aucune notification"
                   />
@@ -355,11 +355,11 @@ export default async function DashboardPage() {
                 <div className="card-header-inline">
                   <div>
                     <CardTitle>Derniers devis</CardTitle>
-                    <CardDescription>Vision commerciale immediate</CardDescription>
+                    <CardDescription>Vision commerciale immédiate</CardDescription>
                   </div>
                   <Link href="/devis">
                     <Button size="sm" variant="ghost">
-                      Voir tout
+                      Tout voir
                     </Button>
                   </Link>
                 </div>
@@ -392,10 +392,10 @@ export default async function DashboardPage() {
                     <EmptyState
                       action={
                         <Link href="/devis/nouveau">
-                          <Button size="sm">Creer un devis</Button>
+                          <Button size="sm">Créer un devis</Button>
                         </Link>
                       }
-                      description="Les devis enregistres apparaitront ici."
+                      description="Les devis enregistrés apparaîtront ici."
                       icon={<FileText size={18} />}
                       title="Aucun devis"
                     />
@@ -412,8 +412,8 @@ export default async function DashboardPage() {
               <CardHeader>
                 <div className="card-header-inline">
                   <div>
-                    <CardTitle>Dernieres factures</CardTitle>
-                    <CardDescription>Suivi de facturation en temps reel</CardDescription>
+                    <CardTitle>Dernières factures</CardTitle>
+                    <CardDescription>Suivi de facturation en temps réel</CardDescription>
                   </div>
                   <Link href="/factures">
                     <Button size="sm" variant="ghost">
@@ -448,7 +448,7 @@ export default async function DashboardPage() {
                   ]}
                   empty={
                     <EmptyState
-                      description="Aucune facture n'est encore remontee dans le CRM."
+                      description="Aucune facture n'est encore remontée dans le CRM."
                       icon={<ReceiptText size={18} />}
                       title="Aucune facture"
                     />

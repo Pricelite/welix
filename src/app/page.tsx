@@ -32,7 +32,7 @@ const features = [
   },
   {
     title: "Un rendu professionnel à envoyer",
-    text: "Chaque devis est clair, propre, cohérent et pensé pour inspirer confiance au client final.",
+    text: "Chaque devis est clair, propre et cohérent pour inspirer confiance au client final.",
     icon: FileText,
   },
   {
@@ -62,7 +62,7 @@ const testimonials = [
   },
   {
     quote:
-      "La page est simple, le devis est sérieux, et je gagne du temps après les visites chantier.",
+      "La page est simple, le devis est sérieux et je gagne du temps après les visites chantier.",
     name: "Hugo M.",
     role: "Électricien",
   },
@@ -82,12 +82,12 @@ const faqs = [
   {
     question: "Quels métiers sont concernés ?",
     answer:
-      "Welix vise les artisans du bâtiment : plomberie, électricité, peinture, maçonnerie, menuiserie, couverture et rénovation.",
+      "Welix s'adresse aux artisans du bâtiment : plomberie, électricité, peinture, maçonnerie, menuiserie, couverture et rénovation.",
   },
   {
-    question: "Est-ce une vraie application ou une maquette ?",
+    question: "Que trouve-t-on dans Welix aujourd'hui ?",
     answer:
-      "Cette version présente l'expérience produit et les écrans clés. Elle peut ensuite être connectée à une base de données, à l'authentification et à l'IA.",
+      "La création de devis, la gestion clients, l'historique commercial, la facturation et un compagnon IA pour guider les premiers usages.",
   },
 ];
 
@@ -314,7 +314,6 @@ export default function Home() {
           <span>Welix</span>
         </Link>
         <span>Devis IA pour artisans</span>
-        <span>Produit</span>
         <span>Confidentialité</span>
         <span>Contact</span>
       </footer>

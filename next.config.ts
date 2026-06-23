@@ -36,9 +36,14 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.104"],
-  experimental: {
-    devtoolSegmentExplorer: false,
-    clientTraceMetadata: [],
+  webpack(config, { dev }) {
+    if (dev) {
+      // Persistent webpack cache is unstable on Windows for this project and
+      // can leave dangling pack files in .next/cache between reloads.
+      config.cache = false;
+    }
+
+    return config;
   },
   async headers() {
     const sharedSecurityHeaders = [
@@ -109,11 +114,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI,
-  tunnelRoute: process.env.NEXT_PUBLIC_SENTRY_DSN ? "/monitoring" : undefined,
-  widenClientFileUpload: Boolean(process.env.SENTRY_AUTH_TOKEN),
-});
+const sentryEnabled = Boolean(
+  process.env.NEXT_PUBLIC_SENTRY_DSN &&
+    process.env.SENTRY_ORG &&
+    process.env.SENTRY_PROJECT &&
+    process.env.SENTRY_AUTH_TOKEN,
+);
+
+export default sentryEnabled
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      tunnelRoute: "/monitoring",
+      widenClientFileUpload: true,
+    })
+  : nextConfig;
