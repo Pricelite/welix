@@ -14,6 +14,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { WELI_CREATE_QUOTE_STORAGE_KEY, type WeliQuotePrefill } from "@/lib/weli/storage";
 
 type GeneratedQuote = {
   description: string;
@@ -54,6 +55,27 @@ export function AiQuoteGenerator({ clients }: { clients: ClientOption[] }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const storedPrefill =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem(WELI_CREATE_QUOTE_STORAGE_KEY)
+        : null;
+
+    if (storedPrefill) {
+      try {
+        const parsed = JSON.parse(storedPrefill) as WeliQuotePrefill;
+        if (typeof parsed.prompt === "string" && parsed.prompt.trim()) {
+          setPrompt(parsed.prompt.trim());
+        }
+        if (typeof parsed.clientId === "string" && parsed.clientId.trim()) {
+          setClientId(parsed.clientId);
+        }
+      } catch {
+        // ignore corrupted prefill
+      } finally {
+        window.sessionStorage.removeItem(WELI_CREATE_QUOTE_STORAGE_KEY);
+      }
+    }
+
     generateQuote();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

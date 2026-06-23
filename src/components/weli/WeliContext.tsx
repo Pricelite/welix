@@ -3,18 +3,17 @@
 import React, { createContext, useContext } from "react";
 import type { WeliMessage } from "@/components/weli/WeliChat";
 import type { WeliExpression } from "@/components/weli/WeliAnimations";
-
-export type WeliPreset = {
-  title: string;
-  bubble: string;
-  opening: string;
-  quickActions: string[];
-};
+import type {
+  WeliActiveContext,
+  WeliMemoryItem,
+  WeliPageProfile,
+  WeliSuggestedAction,
+  WeliWorkspaceSnapshot,
+} from "@/lib/weli/types";
 
 export type WeliState = {
   pathname: string;
-  pageLabel: string;
-  preset: WeliPreset;
+  page: WeliPageProfile;
   expression: WeliExpression;
   bubbleOpen: boolean;
   chatOpen: boolean;
@@ -23,10 +22,17 @@ export type WeliState = {
     y: number;
   };
   messages: WeliMessage[];
+  memory: WeliMemoryItem[];
+  workspace: WeliWorkspaceSnapshot | null;
+  activeContext: WeliActiveContext | null;
   openChat: () => void;
   closeChat: () => void;
   dismissBubble: () => void;
   sendMessage: (message: string) => void;
+  applySuggestedAction: (action: WeliSuggestedAction) => void;
+  rememberItem: (item: Omit<WeliMemoryItem, "id" | "createdAt">) => void;
+  forgetItem: (itemId: string) => void;
+  clearMemory: () => void;
   updateExpression: (expression: WeliExpression) => void;
 };
 
@@ -51,4 +57,3 @@ export function useWeli() {
 
   return context;
 }
-

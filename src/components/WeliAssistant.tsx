@@ -14,33 +14,46 @@ export function WeliAssistant() {
     expression,
     messages,
     openChat,
-    pageLabel,
-    preset,
+    page,
+    memory,
+    workspace,
+    activeContext,
     sendMessage,
+    applySuggestedAction,
+    forgetItem,
+    clearMemory,
   } = useWeli();
 
   return (
     <>
       <div className="weli-assistant" data-testid="weli-assistant">
         <WeliBubble
-          message={preset.bubble}
+          message={page.bubble}
           onOpenChat={openChat}
           open={bubbleOpen && !chatOpen}
-          title={preset.title}
+          title={page.title}
         />
         <WeliAvatar expression={expression} interactive onClick={openChat} />
       </div>
 
       <WeliChat
+        activeContext={activeContext}
+        expertise={page.expertise}
         expression={expression}
+        memory={memory}
         messages={messages}
+        objective={page.objective}
+        onApplySuggestedAction={applySuggestedAction}
+        onClearMemory={clearMemory}
         onClose={closeChat}
+        onForgetMemory={forgetItem}
         onSendMessage={sendMessage}
         open={chatOpen}
-        pageLabel={pageLabel}
-        quickActions={preset.quickActions}
+        pageLabel={page.pageLabel}
+        quickActions={page.quickActions}
+        suggestedActions={page.suggestedActions}
+        workspace={workspace}
       />
     </>
   );
 }
-

@@ -2,6 +2,7 @@ import { createOpenAIClient } from "@/lib/openai";
 import { fallbackExtractQuoteContext } from "@/lib/quote-engine";
 import { quoteExtractionSchema } from "@/lib/schemas";
 import { sanitizePlainText } from "@/lib/sanitize";
+import { WELI_QUOTE_SYSTEM_PROMPT } from "@/lib/weli-prompt";
 
 function extractJsonObject(input: string) {
   const start = input.indexOf("{");
@@ -32,12 +33,13 @@ export async function extractQuoteContext(prompt: string) {
       input: [
         {
           role: "system",
-          content:
-            "Tu es un extracteur de besoins pour artisans français. Réponds uniquement avec un JSON valide contenant exactement les clés trade, service, surface, urgency, materials, durationHours et distanceKm. Tu n'estimes jamais de prix.",
+          content: WELI_QUOTE_SYSTEM_PROMPT,
         },
         {
           role: "user",
-          content: `Analyse ce besoin chantier et extrais seulement les données structurées : ${sanitizedPrompt}`,
+          content:
+            `Analyse ce besoin chantier et extrais seulement les données structurées utiles à la préparation d'un devis.\n\n` +
+            `Besoin utilisateur : ${sanitizedPrompt}`,
         },
       ],
     });

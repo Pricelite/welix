@@ -79,3 +79,9 @@ export const stripeManageSchema = z.object({
   action: z.enum(["upgrade", "downgrade", "cancel", "resume", "portal"]),
   priceId: z.string().trim().min(1).optional(),
 });
+
+export const weliMemorySchema = z.object({
+  label: z.string().trim().min(2, "Le libellé est obligatoire").max(120),
+  value: z.string().trim().min(2, "La valeur est obligatoire").max(500),
+  category: z.enum(["preference", "pricing", "writing", "supplier", "workflow", "customer-care"]),
+});

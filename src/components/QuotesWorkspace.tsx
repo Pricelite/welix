@@ -14,6 +14,8 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ToastItem, ToastViewport } from "@/components/ToastViewport";
 import { formatCurrency } from "@/lib/format";
+import { buildWeliQuoteContext, clearWeliSelection, dispatchWeliSelection } from "@/lib/weli/runtime";
+import { WELI_OPEN_QUOTE_STORAGE_KEY } from "@/lib/weli/storage";
 import type { ClientRecord, QuoteRecord } from "@/lib/workspace";
 
 type QuoteDraft = {
@@ -207,12 +209,50 @@ export function QuotesWorkspace({
   const openCreateModal = useCallback(() => {
     setEditingQuoteId("new");
     setDraft(createEmptyQuoteDraft(clients));
+    dispatchWeliSelection({
+      client: null,
+      quote: null,
+    });
   }, [clients]);
 
   const openEditModal = useCallback((quote: QuoteRecord) => {
     setEditingQuoteId(quote.id);
     setDraft(toDraft(quote));
+    dispatchWeliSelection({
+      client: null,
+      quote: buildWeliQuoteContext(quote),
+    });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const openPayload = window.sessionStorage.getItem(WELI_OPEN_QUOTE_STORAGE_KEY);
+
+    if (!openPayload) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(openPayload) as { mode?: "create" | "edit"; id?: string };
+
+      if (parsed.mode === "edit" && parsed.id) {
+        const quote = initialQuotes.find((entry) => entry.id === parsed.id);
+
+        if (quote) {
+          openEditModal(quote);
+        }
+      } else if (parsed.mode === "create") {
+        openCreateModal();
+      }
+    } catch {
+      // Ignore corrupted Weli navigation payload.
+    } finally {
+      window.sessionStorage.removeItem(WELI_OPEN_QUOTE_STORAGE_KEY);
+    }
+  }, [initialQuotes, openCreateModal, openEditModal]);
 
   const closeModal = useCallback(() => {
     if (saving) {
@@ -220,6 +260,7 @@ export function QuotesWorkspace({
     }
 
     setEditingQuoteId(null);
+    clearWeliSelection();
   }, [saving]);
 
   async function submitQuote() {

@@ -15,6 +15,8 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ToastItem, ToastViewport } from "@/components/ToastViewport";
 import { formatCurrency } from "@/lib/format";
+import { buildWeliClientContext, clearWeliSelection, dispatchWeliSelection } from "@/lib/weli/runtime";
+import { WELI_CREATE_CLIENT_STORAGE_KEY, WELI_OPEN_CLIENT_STORAGE_KEY } from "@/lib/weli/storage";
 import type { ClientRecord } from "@/lib/workspace";
 
 type ClientDraft = {
@@ -142,6 +144,10 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
   const openCreateModal = useCallback(() => {
     setEditingClientId("new");
     setDraft(emptyDraft);
+    dispatchWeliSelection({
+      client: null,
+      quote: null,
+    });
   }, []);
 
   const openEditModal = useCallback((client: ClientRecord) => {
@@ -152,7 +158,43 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
       email: client.email || "",
       city: client.city || "",
     });
+    dispatchWeliSelection({
+      client: buildWeliClientContext(client),
+      quote: null,
+    });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const openPayload = window.sessionStorage.getItem(WELI_OPEN_CLIENT_STORAGE_KEY);
+    const shouldOpen = window.sessionStorage.getItem(WELI_CREATE_CLIENT_STORAGE_KEY);
+
+    if (openPayload) {
+      try {
+        const parsed = JSON.parse(openPayload) as { mode?: "create" | "edit"; id?: string };
+
+        if (parsed.mode === "edit" && parsed.id) {
+          const client = initialClients.find((entry) => entry.id === parsed.id);
+
+          if (client) {
+            openEditModal(client);
+          }
+        } else if (parsed.mode === "create") {
+          openCreateModal();
+        }
+      } catch {
+        // Ignore corrupted Weli navigation payload.
+      } finally {
+        window.sessionStorage.removeItem(WELI_OPEN_CLIENT_STORAGE_KEY);
+      }
+    } else if (shouldOpen === "open-create") {
+      openCreateModal();
+      window.sessionStorage.removeItem(WELI_CREATE_CLIENT_STORAGE_KEY);
+    }
+  }, [initialClients, openCreateModal, openEditModal]);
 
   const closeModal = useCallback(() => {
     if (saving) {
@@ -161,6 +203,7 @@ export function ClientsWorkspace({ initialClients }: { initialClients: ClientRec
 
     setEditingClientId(null);
     setDraft(emptyDraft);
+    clearWeliSelection();
   }, [saving]);
 
   async function submitClient() {

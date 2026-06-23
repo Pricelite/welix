@@ -54,4 +54,3 @@ export async function parseJson<T>(
 
   return schema.parse(body);
 }
-

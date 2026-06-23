@@ -1,137 +1,26 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { useCallback } from "react";
-import { usePathname } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { WeliAssistant } from "@/components/WeliAssistant";
-import { WeliContextProvider, type WeliPreset } from "@/components/weli/WeliContext";
+import { WeliContextProvider } from "@/components/weli/WeliContext";
 import type { WeliMessage } from "@/components/weli/WeliChat";
 import type { WeliExpression } from "@/components/weli/WeliAnimations";
-
-const weliPresets: Array<{
-  match: (pathname: string) => boolean;
-  label: string;
-  preset: WeliPreset;
-}> = [
-  {
-    match: (pathname) => pathname === "/",
-    label: "la landing page",
-    preset: {
-      title: "Bonjour, je suis Weli.",
-      bubble: "Je peux vous aider à découvrir Welix sans vous ralentir.",
-      opening:
-        "Bonjour. Je suis Weli. Je peux te présenter Welix, t'expliquer le parcours ou te guider vers le bon point de départ.",
-      quickActions: [
-        "Montre-moi comment fonctionne Welix",
-        "Par quoi commencer pour tester l'application ?",
-        "Quelle est la promesse principale de Welix ?",
-      ],
-    },
-  },
-  {
-    match: (pathname) => pathname.startsWith("/devis/nouveau"),
-    label: "la création de devis",
-    preset: {
-      title: "Besoin d'aide pour créer un devis ?",
-      bubble: "Je peux te guider pour ton premier devis étape par étape.",
-      opening:
-        "Je peux t'aider à structurer un premier devis, à choisir les bonnes informations et à comprendre le résultat généré.",
-      quickActions: [
-        "Aide-moi à créer mon premier devis",
-        "Quelles informations faut-il saisir ici ?",
-        "Comment relire un devis avant envoi ?",
-      ],
-    },
-  },
-  {
-    match: (pathname) => pathname.startsWith("/devis"),
-    label: "les devis",
-    preset: {
-      title: "Je peux t'aider à suivre les devis.",
-      bubble: "Statuts, duplication, relecture : je peux t'expliquer l'espace devis.",
-      opening:
-        "Dans cet espace, je peux t'aider à retrouver un devis, comprendre les statuts et gagner du temps dans le suivi commercial.",
-      quickActions: [
-        "Explique-moi les statuts des devis",
-        "Comment dupliquer un devis ?",
-        "Comment retrouver rapidement un devis précis ?",
-      ],
-    },
-  },
-  {
-    match: (pathname) => pathname.startsWith("/clients"),
-    label: "les clients",
-    preset: {
-      title: "Je peux te montrer comment retrouver un client rapidement.",
-      bubble: "Recherche, tri, archivage : je peux t'aider à prendre en main l'espace clients.",
-      opening:
-        "Je peux t'expliquer comment créer, modifier, archiver ou retrouver une fiche client dans Welix.",
-      quickActions: [
-        "Comment créer une fiche client propre ?",
-        "Comment archiver un client ?",
-        "Comment retrouver un client rapidement ?",
-      ],
-    },
-  },
-  {
-    match: (pathname) => pathname.startsWith("/dashboard"),
-    label: "le tableau de bord",
-    preset: {
-      title: "Bienvenue dans le cockpit Welix.",
-      bubble: "Je peux t'expliquer les chiffres et les prochaines actions utiles.",
-      opening:
-        "Le tableau de bord centralise les indicateurs utiles. Je peux t'aider à lire l'activité, les objectifs et les signaux prioritaires.",
-      quickActions: [
-        "Explique-moi les cartes du tableau de bord",
-        "À quoi servent les notifications ?",
-        "Comment interpréter les objectifs ?",
-      ],
-    },
-  },
-];
-
-function getPreset(pathname: string) {
-  return (
-    weliPresets.find((entry) => entry.match(pathname)) ?? {
-      label: "Welix",
-      preset: {
-        title: "Je reste disponible si besoin.",
-        bubble: "Je peux t'aider à utiliser cette page plus sereinement.",
-        opening:
-          "Je suis là pour t'aider à comprendre cette page, à retrouver une action ou à préparer une prochaine étape.",
-        quickActions: [
-          "Que puis-je faire ici ?",
-          "Aide-moi à comprendre cette page",
-          "Guide-moi pas à pas",
-        ],
-      },
-    }
-  );
-}
-
-function buildReply(message: string, pathname: string) {
-  const normalized = message.toLowerCase();
-
-  if (/premier devis|créer un devis|creer un devis/.test(normalized)) {
-    return "Commence par choisir le client, décris clairement le besoin, puis vérifie le chiffrage avant l'enregistrement final.";
-  }
-
-  if (/client|fiche client|retrouver un client/.test(normalized)) {
-    return "Une bonne fiche client contient le nom, le contact, l'email, la ville et un historique propre pour faciliter les devis suivants.";
-  }
-
-  if (/dashboard|objectif|notification|chiffre/.test(normalized)) {
-    return "Le tableau de bord sert surtout à prioriser : regarde les devis en attente, les notifications importantes et l'évolution du chiffre d'affaires.";
-  }
-
-  if (/commencer|débuter|debuter|pas à pas/.test(normalized)) {
-    return pathname.startsWith("/clients")
-      ? "Je te conseille de commencer par créer une fiche client complète, puis de générer un premier devis depuis cet espace."
-      : "Le meilleur point de départ est de créer un client, puis un premier devis pour valider tout le parcours Welix.";
-  }
-
-  return "Je peux déjà t'aider à utiliser Welix, expliquer une page ou te guider étape par étape. Plus tard, on pourra brancher OpenAI ici sans refaire l'interface.";
-}
+import { buildWeliReply } from "@/lib/weli/copilot";
+import { createMemoryItem, readWeliMemory, writeWeliMemory } from "@/lib/weli/memory";
+import { getWeliPageProfile } from "@/lib/weli/page-context";
+import {
+  WELI_CREATE_QUOTE_STORAGE_KEY,
+  WELI_DRAFT_EMAIL_STORAGE_KEY,
+  WELI_OPEN_CLIENT_STORAGE_KEY,
+  WELI_OPEN_QUOTE_STORAGE_KEY,
+} from "@/lib/weli/storage";
+import type {
+  WeliActiveContext,
+  WeliMemoryItem,
+  WeliSuggestedAction,
+  WeliWorkspaceSnapshot,
+} from "@/lib/weli/types";
 
 function isCustomWeliStateEvent(
   event: Event,
@@ -139,32 +28,132 @@ function isCustomWeliStateEvent(
   return typeof event === "object" && event !== null && "detail" in event;
 }
 
+function isWeliSelectionEvent(
+  event: Event,
+): event is CustomEvent<Partial<WeliActiveContext>> {
+  return typeof event === "object" && event !== null && "detail" in event;
+}
+
+function mergeMemoryItem(current: WeliMemoryItem[], incoming: WeliMemoryItem) {
+  const deduped = current.filter(
+    (entry) =>
+      entry.id !== incoming.id && !(entry.label === incoming.label && entry.value === incoming.value),
+  );
+
+  return [incoming, ...deduped].slice(0, 20);
+}
+
 export function WeliProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
+  const router = useRouter();
   const [expression, setExpression] = useState<WeliExpression>("idle");
   const [bubbleOpen, setBubbleOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [pointer, setPointer] = useState({ x: 0.5, y: 0.5 });
-  const { label, preset } = useMemo(() => getPreset(pathname), [pathname]);
+  const [memory, setMemory] = useState<WeliMemoryItem[]>([]);
+  const [workspace, setWorkspace] = useState<WeliWorkspaceSnapshot | null>(null);
+  const [activeContext, setActiveContext] = useState<WeliActiveContext | null>(null);
+  const page = useMemo(() => getWeliPageProfile(pathname), [pathname]);
   const [messages, setMessages] = useState<WeliMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: preset.opening,
+      content: page.opening,
+      expertise: page.expertise,
     },
   ]);
 
   useEffect(() => {
+    setMemory(readWeliMemory());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkspace() {
+      try {
+        const response = await fetch("/api/weli/context", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setWorkspace(null);
+          }
+          return;
+        }
+
+        const data = (await response.json()) as { workspace?: WeliWorkspaceSnapshot | null };
+
+        if (!cancelled) {
+          setWorkspace(data.workspace ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setWorkspace(null);
+        }
+      }
+    }
+
+    loadWorkspace();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPersistentMemory() {
+      try {
+        const response = await fetch("/api/weli/memory", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { memories?: WeliMemoryItem[] };
+        const remoteMemory = Array.isArray(data.memories) ? data.memories : [];
+
+        if (!cancelled && remoteMemory.length > 0) {
+          setMemory(remoteMemory);
+        }
+      } catch {
+        // Keep local memory when the API is unavailable.
+      }
+    }
+
+    loadPersistentMemory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    writeWeliMemory(memory);
+  }, [memory]);
+
+  useEffect(() => {
     setBubbleOpen(true);
     setExpression(pathname === "/" ? "happy" : "idle");
+    setActiveContext(null);
     setMessages([
       {
         id: `welcome-${pathname}`,
         role: "assistant",
-        content: preset.opening,
+        content: page.opening,
+        expertise: page.expertise,
       },
     ]);
-  }, [pathname, preset.opening]);
+  }, [pathname, page]);
 
   useEffect(() => {
     function handlePointerMove(event: PointerEvent) {
@@ -217,13 +206,92 @@ export function WeliProvider({ children }: { children: React.ReactNode }) {
             id: `external-${Date.now()}`,
             role: "assistant",
             content: nextMessage.trim(),
+            expertise: page.expertise,
           },
         ]);
       }
     }
 
+    function handleSelection(event: Event) {
+      if (!isWeliSelectionEvent(event)) {
+        return;
+      }
+
+      setActiveContext((current) => ({
+        client:
+          "client" in event.detail ? event.detail.client ?? null : current?.client ?? null,
+        quote:
+          "quote" in event.detail ? event.detail.quote ?? null : current?.quote ?? null,
+      }));
+    }
+
     window.addEventListener("weli:state", handleExternalState as EventListener);
-    return () => window.removeEventListener("weli:state", handleExternalState as EventListener);
+    window.addEventListener("weli:selection", handleSelection as EventListener);
+
+    return () => {
+      window.removeEventListener("weli:state", handleExternalState as EventListener);
+      window.removeEventListener("weli:selection", handleSelection as EventListener);
+    };
+  }, [page.expertise]);
+
+  const rememberItem = useCallback((item: Omit<WeliMemoryItem, "id" | "createdAt">) => {
+    const optimisticItem = createMemoryItem(item);
+
+    setMemory((current) => mergeMemoryItem(current, optimisticItem));
+
+    void fetch("/api/weli/memory", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(item),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = (await response.json()) as { memory?: WeliMemoryItem };
+        return data.memory ?? null;
+      })
+      .then((serverMemory) => {
+        if (!serverMemory) {
+          return;
+        }
+
+        setMemory((current) =>
+          mergeMemoryItem(
+            current.filter((entry) => entry.id !== optimisticItem.id),
+            serverMemory,
+          ),
+        );
+      })
+      .catch(() => {
+        // Keep optimistic local memory even if persistence fails.
+      });
+  }, []);
+
+  const forgetItem = useCallback((itemId: string) => {
+    setMemory((current) => current.filter((item) => item.id !== itemId));
+
+    void fetch(`/api/weli/memory/${itemId}`, {
+      method: "DELETE",
+      credentials: "include",
+    }).catch(() => {
+      // Keep UI responsive even if deletion cannot be synced immediately.
+    });
+  }, []);
+
+  const clearMemory = useCallback(() => {
+    setMemory([]);
+
+    void fetch("/api/weli/memory", {
+      method: "DELETE",
+      credentials: "include",
+    }).catch(() => {
+      // Local reset remains useful when the API is unavailable.
+    });
   }, []);
 
   const openChat = useCallback(() => {
@@ -240,6 +308,84 @@ export function WeliProvider({ children }: { children: React.ReactNode }) {
   const dismissBubble = useCallback(() => {
     setBubbleOpen(false);
   }, []);
+
+  const applySuggestedAction = useCallback(
+    (action: WeliSuggestedAction) => {
+      setChatOpen(true);
+      setExpression("success");
+
+      if (typeof window !== "undefined") {
+        switch (action.kind) {
+          case "create-quote":
+            window.sessionStorage.setItem(
+              WELI_CREATE_QUOTE_STORAGE_KEY,
+              JSON.stringify({
+                prompt:
+                  "Préparer un devis clair avec les informations essentielles, les postes utiles et les points de vigilance.",
+                clientId: activeContext?.client?.id ?? activeContext?.quote?.clientId ?? undefined,
+              }),
+            );
+            router.push("/devis/nouveau");
+            break;
+          case "create-client":
+            window.sessionStorage.setItem(
+              WELI_OPEN_CLIENT_STORAGE_KEY,
+              JSON.stringify({
+                mode: "create",
+              }),
+            );
+            router.push("/clients");
+            break;
+          case "open-clients":
+            window.sessionStorage.setItem(
+              WELI_OPEN_CLIENT_STORAGE_KEY,
+              JSON.stringify({
+                mode: activeContext?.client ? "edit" : "create",
+                id: activeContext?.client?.id,
+              }),
+            );
+            router.push("/clients");
+            break;
+          case "open-quotes":
+          case "review-margin":
+            window.sessionStorage.setItem(
+              WELI_OPEN_QUOTE_STORAGE_KEY,
+              JSON.stringify({
+                mode: activeContext?.quote ? "edit" : "create",
+                id: activeContext?.quote?.id,
+              }),
+            );
+            router.push("/devis");
+            break;
+          case "open-billing":
+            router.push("/factures");
+            break;
+          case "draft-email":
+            window.sessionStorage.setItem(
+              WELI_DRAFT_EMAIL_STORAGE_KEY,
+              "Relance professionnelle courte, rassurante et orientée action.",
+            );
+            router.push("/devis");
+            break;
+          default:
+            break;
+        }
+      }
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: `action-${Date.now()}`,
+          role: "assistant",
+          content: `${action.label} : ${action.description} Je t'emmène vers le bon espace pour préparer l'action.`,
+          expertise: page.expertise,
+        },
+      ]);
+
+      window.setTimeout(() => setExpression("idle"), 1800);
+    },
+    [activeContext, page.expertise, router],
+  );
 
   const sendMessage = useCallback(
     (message: string) => {
@@ -264,52 +410,87 @@ export function WeliProvider({ children }: { children: React.ReactNode }) {
         },
       ]);
 
+      const reply = buildWeliReply(safeMessage, {
+        pathname,
+        page,
+        memory,
+        workspace,
+        activeContext,
+      });
+
+      if (reply.memoryToSave) {
+        rememberItem(reply.memoryToSave);
+      }
+
       window.setTimeout(() => {
-        setExpression("speaking");
-        setMessages((current) => [
-          ...current,
+        setExpression(reply.suggestedAction ? "success" : "speaking");
+        const nextMessages: WeliMessage[] = [
           {
             id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: buildReply(safeMessage, pathname),
+            content: reply.content,
+            expertise: reply.expertise,
           },
-        ]);
+        ];
+
+        if (reply.suggestedAction) {
+          nextMessages.push({
+            id: `assistant-action-${Date.now()}`,
+            role: "assistant",
+            content: `Action proposée : ${reply.suggestedAction.label}. ${reply.suggestedAction.description}`,
+            expertise: reply.expertise,
+          });
+        }
+
+        setMessages((current) => [...current, ...nextMessages]);
       }, 320);
 
-      window.setTimeout(() => setExpression("idle"), 1700);
+      window.setTimeout(() => setExpression("idle"), 1900);
     },
-    [pathname],
+    [activeContext, memory, page, pathname, rememberItem, workspace],
   );
 
   const value = useMemo(
     () => ({
       pathname,
-      pageLabel: label,
-      preset,
+      page,
       expression,
       bubbleOpen,
       chatOpen,
       pointer,
       messages,
+      memory,
+      workspace,
+      activeContext,
       openChat,
       closeChat,
       dismissBubble,
       sendMessage,
+      applySuggestedAction,
+      rememberItem,
+      forgetItem,
+      clearMemory,
       updateExpression: setExpression,
     }),
     [
       pathname,
-      label,
-      preset,
+      page,
       expression,
       bubbleOpen,
       chatOpen,
       pointer,
       messages,
+      memory,
+      workspace,
+      activeContext,
       openChat,
       closeChat,
       dismissBubble,
       sendMessage,
+      applySuggestedAction,
+      rememberItem,
+      forgetItem,
+      clearMemory,
     ],
   );
 
