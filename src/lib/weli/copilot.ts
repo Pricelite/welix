@@ -58,8 +58,13 @@ function buildActiveContextLead(context: WeliCopilotContext) {
   return `${clientLead}${quoteLead}`;
 }
 
+function buildMemoryConfirmation(memoryToSave: NonNullable<WeliReply["memoryToSave"]>) {
+  return `Compris, je retiens désormais "${memoryToSave.label}" : ${memoryToSave.value}.`;
+}
+
 export function buildWeliReply(message: string, context: WeliCopilotContext): WeliReply {
   const normalized = message.toLowerCase().trim();
+  const memoryToSave = extractMemoryIntent(message);
   const relevantMemory = findRelevantMemory(context.memory, normalized);
   const workspaceLead = context.workspace
     ? `${context.workspace.companyName || "Ton entreprise"} suit actuellement ${context.workspace.clientCount} clients, ${context.workspace.quoteCount} devis et ${context.workspace.invoiceCount} factures. `
@@ -70,11 +75,21 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
       ? `Je garde aussi en tête ${relevantMemory.map((item) => `"${item.label}"`).join(" et ")}. `
       : "";
 
+  if (memoryToSave && !/devis|client|relance|facture|comment|commencer|débuter|debuter|pas à pas|pas a pas/i.test(normalized)) {
+    return {
+      expertise: context.page.expertise,
+      memoryToSave,
+      content:
+        `${workspaceLead}${activeContextLead}${buildMemoryConfirmation(memoryToSave)} ` +
+        `Je m'en servirai pour t'aider plus vite sur les prochains devis, relances ou analyses.`,
+    };
+  }
+
   if (/modifier|ouvrir|retrouver|fiche en cours/i.test(normalized) && /client|contact|fiche/i.test(normalized)) {
     return {
       expertise: "Expert Clients",
       suggestedAction: actionByKind("open-clients", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}` +
         (context.activeContext?.client
@@ -87,7 +102,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: "Expert Devis",
       suggestedAction: actionByKind("open-quotes", context) ?? actionByKind("create-quote", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}` +
         (context.activeContext?.quote
@@ -100,7 +115,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: "Expert Devis",
       suggestedAction: actionByKind("create-quote", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}Pour un devis solide, je vérifie d'abord le métier, le type de chantier, les dimensions, les matériaux, l'accès, les délais et les contraintes. ` +
         `S'il manque une information essentielle, je préfère la faire préciser plutôt que de chiffrer au hasard. ` +
@@ -112,7 +127,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: "Expert Clients",
       suggestedAction: actionByKind("open-clients", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}Une fiche client utile doit te faire gagner du temps au prochain devis : coordonnées propres, contact principal, ville, contexte chantier et préférences notables. ` +
         `Si tu veux, je peux te proposer la structure idéale d'une fiche client vraiment exploitable.`,
@@ -123,7 +138,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: "Expert Commercial",
       suggestedAction: actionByKind("draft-email", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}Je peux préparer une relance courte, professionnelle et rassurante. ` +
         `L'objectif est de relancer sans pression inutile, tout en rappelant la valeur de la proposition envoyée.`,
@@ -134,7 +149,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: "Expert Facturation",
       suggestedAction: actionByKind("open-billing", context),
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}Sur la facturation, je peux t'aider à vérifier la TVA, les montants, les échéances et les points de cohérence avant envoi. ` +
         `Dès qu'une donnée relève d'une hypothèse, je la présente comme une estimation à valider.`,
@@ -145,7 +160,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
     return {
       expertise: context.page.expertise,
       suggestedAction: context.page.suggestedActions[0],
-      memoryToSave: extractMemoryIntent(message),
+      memoryToSave,
       content:
         `${workspaceLead}${activeContextLead}${memoryPrefix}Le plus simple est d'avancer par étapes courtes : 1. clarifier l'objectif de la page, 2. vérifier les informations obligatoires, 3. préparer l'action utile, 4. relire avant validation. ` +
         `Sur cette page, ma priorité est : ${context.page.objective.toLowerCase()}`,
@@ -155,7 +170,7 @@ export function buildWeliReply(message: string, context: WeliCopilotContext): We
   return {
     expertise: context.page.expertise,
     suggestedAction: context.page.suggestedActions[0],
-    memoryToSave: extractMemoryIntent(message),
+    memoryToSave,
     content:
       `${workspaceLead}${activeContextLead}${memoryPrefix}${WELI_IDENTITY.promise} ` +
       `Sur ${context.page.pageLabel}, je peux t'aider à aller plus vite, éviter les oublis et préparer une action concrète plutôt que simplement répondre à une question.`,

@@ -26,15 +26,17 @@ export function WeliAssistant() {
 
   return (
     <>
-      <div className="weli-assistant" data-testid="weli-assistant">
-        <WeliBubble
-          message={page.bubble}
-          onOpenChat={openChat}
-          open={bubbleOpen && !chatOpen}
-          title={page.title}
-        />
-        <WeliAvatar expression={expression} interactive onClick={openChat} />
-      </div>
+      {!chatOpen ? (
+        <div className="weli-assistant" data-testid="weli-assistant">
+          <WeliBubble
+            message={page.bubble}
+            onOpenChat={openChat}
+            open={bubbleOpen}
+            title={page.title}
+          />
+          <WeliAvatar expression={expression} interactive onClick={openChat} />
+        </div>
+      ) : null}
 
       <WeliChat
         activeContext={activeContext}

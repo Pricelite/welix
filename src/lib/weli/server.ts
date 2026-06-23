@@ -1,3 +1,5 @@
+import { getServerEnv } from "@/lib/env";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { WeliMemoryCategory, WeliMemoryItem } from "@/lib/weli/types";
 
@@ -19,8 +21,24 @@ function normalizeWeliMemory(row: WeliMemoryRow): WeliMemoryItem {
   };
 }
 
+function hasServiceRoleKey() {
+  try {
+    return Boolean(getServerEnv().SUPABASE_SERVICE_ROLE_KEY);
+  } catch {
+    return false;
+  }
+}
+
+async function createMemoryClient() {
+  if (hasServiceRoleKey()) {
+    return createSupabaseAdminClient();
+  }
+
+  return createSupabaseServerClient();
+}
+
 export async function listWeliMemoriesForUser(userId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createMemoryClient();
   const { data, error } = await supabase
     .from("weli_memories")
     .select("id, label, value, category, created_at")
@@ -47,7 +65,7 @@ export async function createWeliMemoryForUser(
     category: WeliMemoryCategory;
   },
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createMemoryClient();
   const { data, error } = await supabase
     .from("weli_memories")
     .insert({
@@ -60,14 +78,14 @@ export async function createWeliMemoryForUser(
     .single();
 
   if (error || !data) {
-    throw new Error(`Impossible d'enregistrer la mémoire Weli: ${error?.message ?? "creation incomplete"}`);
+    throw new Error(`Impossible d'enregistrer la mémoire Weli: ${error?.message ?? "création incomplète"}`);
   }
 
   return normalizeWeliMemory(data as WeliMemoryRow);
 }
 
 export async function deleteWeliMemoryForUser(userId: string, memoryId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createMemoryClient();
   const { error } = await supabase.from("weli_memories").delete().eq("user_id", userId).eq("id", memoryId);
 
   if (error) {
@@ -76,7 +94,7 @@ export async function deleteWeliMemoryForUser(userId: string, memoryId: string) 
 }
 
 export async function clearWeliMemoriesForUser(userId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createMemoryClient();
   const { error } = await supabase.from("weli_memories").delete().eq("user_id", userId);
 
   if (error) {

@@ -257,6 +257,16 @@ export function WeliProvider({ children }: { children: React.ReactNode }) {
       })
       .then((serverMemory) => {
         if (!serverMemory) {
+          setMessages((current) => [
+            ...current,
+            {
+              id: `memory-warning-${Date.now()}`,
+              role: "assistant",
+              content:
+                "J'ai mémorisé cette information localement, mais la synchronisation distante n'a pas encore abouti.",
+              expertise: page.expertise,
+            },
+          ]);
           return;
         }
 
@@ -268,9 +278,18 @@ export function WeliProvider({ children }: { children: React.ReactNode }) {
         );
       })
       .catch(() => {
-        // Keep optimistic local memory even if persistence fails.
+        setMessages((current) => [
+          ...current,
+          {
+            id: `memory-error-${Date.now()}`,
+            role: "assistant",
+            content:
+              "Je garde cette information localement pour l'instant, mais je n'ai pas pu l'enregistrer en base.",
+            expertise: page.expertise,
+          },
+        ]);
       });
-  }, []);
+  }, [page.expertise]);
 
   const forgetItem = useCallback((itemId: string) => {
     setMemory((current) => current.filter((item) => item.id !== itemId));
